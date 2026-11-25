@@ -39,6 +39,19 @@ termuxai-harness  (curl)
 bash -c 执行 → 输出回显
 ```
 
+## 平台支持
+
+| 平台 | 脚本 | 安装 |
+| --- | --- | --- |
+| Termux (Android) | `bin/termuxai`、`bin/termuxai-harness`（bash） | `bash install.sh` |
+| Linux（Debian/Arch/Fedora 等） | 同上（bash） | `bash install.sh` 或 `bash install.sh --system` |
+| macOS | 同上（bash） | `bash install.sh` |
+| Windows 10/11 | `windows/termuxai.ps1`、`windows/termuxai-harness.ps1`（PowerShell 5.1+ / 7+） | `powershell -ExecutionPolicy Bypass -File windows/install.ps1` |
+
+Linux/macOS 默认装到 `~/.local/bin`，不需要 sudo；`--system` 装到 `/usr/local/bin`。Termux 固定装 `$PREFIX/bin`。Windows 装到 `%LOCALAPPDATA%\TermuxAI\bin` 并加入用户 PATH，附带 `.cmd` 启动器，在 cmd 里也能直接敲 `termuxai`。
+
+两个平台的脚本逻辑一致，环境变量也完全一致，细节见 [PLATFORMS.md](PLATFORMS.md)。
+
 ## 安装
 
 前提：Termux（F-Droid 或 GitHub 版），已 `pkg install curl jq`。
