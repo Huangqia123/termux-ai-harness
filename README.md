@@ -1,5 +1,7 @@
 # Termux AI Harness
 
+> **English:** Turn an Android device into a fully offline AI terminal. A local llama.cpp server does the inference; `termuxai` chats, `termuxai-harness` turns plain language into shell commands you approve before they run. Everything stays on `127.0.0.1` — no internet, no uploads, no cloud API.
+
 把一台 Android 平板变成**完全离线的本地 AI 终端**：llama.cpp 在本机跑模型，`termuxai` 负责聊天，`termuxai-harness` 负责把你的自然语言翻译成 shell 命令并在你确认后执行。
 
 全程 `127.0.0.1`，不联网、不上传、不依赖任何云端 API。1~2 秒一次响应。
@@ -56,7 +58,7 @@ chmod +x "$PREFIX/bin/termuxai" "$PREFIX/bin/termuxai-harness"
 
 ## 先起服务
 
-模型自己准备，随便一个 GGUF 就行，小模型够用：
+模型自己准备，随便一个 GGUF 就行，小模型够用。不想自己挑的话，[MODELS.md](MODELS.md) 按低 / 中 / 高配分了三档，每档配中英文两个模型，也可以直接从 Release 下载或跑 `./download-models.sh low-cn`。
 
 ```bash
 llama-server -m ./Qwen1.5-0.5B-Chat-Q4_K_M.gguf -c 1024 --port 8080
