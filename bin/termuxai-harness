@@ -1,0 +1,170 @@
+#!/usr/bin/env bash
+#
+# Termux AI Harness - a minimal human-in-the-loop shell agent backed by a
+# local llama.cpp server. It turns natural language into shell commands,
+# screens them for dangerous patterns, shows them to the operator and runs
+# them only after explicit confirmation.
+#
+# Requires: curl, jq
+# License: MIT
+#
+
+set -uo pipefail
+
+API_URL="${TERMUX_AI_URL:-http://127.0.0.1:8080/v1/chat/completions}"
+MODEL="${TERMUX_AI_MODEL:-}"
+TEMPERATURE="${TERMUX_AI_TEMPERATURE:-0.1}"
+MAX_TOKENS="${TERMUX_AI_MAX_TOKENS:-256}"
+TIMEOUT="${TERMUX_AI_TIMEOUT:-120}"
+AUTO_RETRY="${TERMUX_AI_AUTO_RETRY:-0}"
+MAX_RETRY="${TERMUX_AI_MAX_RETRY:-2}"
+
+SYSTEM_PROMPT="${TERMUX_AI_HARNESS_SYSTEM:-You are Termux AI Harness, a shell command generator for Termux on Android. Reply with shell commands only. No explanation, no comments, no markdown fences. Output at most one line. The operator will review the command before it runs.}"
+
+# Dangerous pattern blacklist. Matched against the generated command.
+DANGER_PATTERN='rm[[:space:]]+-[a-zA-Z]*[rf]|rm[[:space:]]+--(recursive|force)|mkfs|dd[[:space:]]+of=|shutdown|reboot|poweroff|halt|chmod[[:space:]]+-R[[:space:]]+777[[:space:]]+/|mv[[:space:]]+/\S+[[:space:]]+/\S+|:[[:space:]]*\(\)[[:space:]]*\{'
+
+die() {
+    printf 'error: %s\n' "$1" >&2
+    exit 1
+}
+
+command -v curl >/dev/null 2>&1 || die "curl not found. Install it with: pkg install curl"
+command -v jq >/dev/null 2>&1 || die "jq not found. Install it with: pkg install jq"
+
+request_command() {
+    local prompt="$1"
+    local extra='{}'
+    [ -n "$MODEL" ] && extra=$(jq -n --arg m "$MODEL" '{model:$m}')
+
+    local body
+    body=$(jq -n \
+        --argjson e "$extra" \
+        --arg s "$SYSTEM_PROMPT" \
+        --arg u "$prompt" \
+        --argjson t "$TEMPERATURE" \
+        --argjson m "$MAX_TOKENS" \
+        '$e + {messages: [{role:"system",content:$s},{role:"user",content:$u}], temperature:$t, max_tokens:$m, stream:false}')
+
+    local resp
+    resp=$(curl -sS --max-time "$TIMEOUT" "$API_URL" \
+        -H 'Content-Type: application/json' \
+        -d "$body" 2>&1)
+
+    if [ -z "$resp" ]; then
+        printf 'error: empty response, is llama-server listening on %s ?\n' "$API_URL" >&2
+        return 1
+    fi
+
+    local err
+    err=$(jq -r 'if type=="object" then (.error // empty | if type=="object" then .message else . end) else empty end' <<<"$resp" 2>/dev/null)
+    if [ -n "${err:-}" ]; then
+        printf 'error: server says: %s\n' "$err" >&2
+        return 1
+    fi
+
+    local raw
+    raw=$(jq -r '.choices[0].message.content // empty' <<<"$resp" 2>/dev/null)
+    [ -n "$raw" ] || { printf 'error: no content in response\n' >&2; return 1; }
+
+    # Strip markdown fences, comments and blank lines, keep the command lines.
+    printf '%s\n' "$raw" \
+        | sed -e 's/^```[a-zA-Z]*$//' -e 's/^```$//' \
+        | grep -v '^[[:space:]]*#' \
+        | grep -v '^[[:space:]]*$' \
+        | sed -e 's/^[[:space:]]*\$[[:space:]]*//' \
+        | head -n 5
+}
+
+is_dangerous() {
+    printf '%s\n' "$1" | grep -qiE "$DANGER_PATTERN"
+}
+
+show_cmd() {
+    printf '\n\033[36mgenerated>\033[0m\n'
+    printf '\033[33m%s\033[0m\n' "$1"
+}
+
+run_cmd() {
+    printf '\n\033[90m--- output ---\033[0m\n'
+    OUTPUT=$(bash -c "$1" 2>&1)
+    local rc=$?
+    printf '%s\n' "$OUTPUT"
+    printf '\033[90m--- exit code: %d ---\033[0m\n' "$rc"
+    return $rc
+}
+
+# Turn a multi-line command block into a single line joined by &&.
+join_cmd() {
+    printf '%s\n' "$1" | awk 'NF { if (n++) printf " && "; printf "%s", $0 } END { printf "\n" }'
+}
+
+printf '\033[36mTermux AI Harness\033[0m\n'
+printf 'endpoint: %s\n' "$API_URL"
+printf 'mode: human in the loop (command is shown, you confirm, then it runs)\n'
+printf 'commands: /exit  quit   /help  help\n'
+
+while :; do
+    printf '\n\033[36mTask>\033[0m '
+    IFS= read -r req || break
+
+    case "$req" in
+        ''|' '*|$'\t'*) continue ;;
+        /exit|/quit|exit|quit) break ;;
+        /help)
+            printf 'Describe what you want done in plain language.\n'
+            printf 'The agent replies with a shell command; press y to run it.\n'
+            continue
+            ;;
+    esac
+
+    attempt=0
+    context="$req"
+
+    while :; do
+        cmd=$(request_command "$context") || break
+        [ -n "$cmd" ] || { printf 'agent returned no command\n'; break; }
+
+        cmd=$(join_cmd "$cmd")
+
+        if is_dangerous "$cmd"; then
+            printf '\n\033[31m[blocked] dangerous pattern detected, command refused:\033[0m\n'
+            printf '\033[33m%s\033[0m\n' "$cmd"
+            break
+        fi
+
+        show_cmd "$cmd"
+
+        if [ "$AUTO_RETRY" = "1" ]; then
+            answer="y"
+        else
+            printf 'run it? [y/N] '
+            IFS= read -r answer || break
+        fi
+
+        case "$answer" in
+            y|Y|yes|YES) ;;
+            *) printf 'skipped\n'; break ;;
+        esac
+
+        if run_cmd "$cmd"; then
+            break
+        fi
+
+        attempt=$((attempt + 1))
+        if [ "$attempt" -gt "$MAX_RETRY" ]; then
+            printf 'gave up after %d attempts\n' "$MAX_RETRY"
+            break
+        fi
+        printf '\n\033[33mretrying with error context (%d/%d)\033[0m\n' "$attempt" "$MAX_RETRY"
+        context="$req
+The previous command failed:
+$cmd
+Its output was:
+$OUTPUT
+Reply with a corrected command."
+        continue
+    done
+done
+
+printf '\nbye.\n'

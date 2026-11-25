@@ -1,0 +1,102 @@
+#!/usr/bin/env bash
+#
+# Termux AI - offline chat client for a local llama.cpp server.
+#
+# Requires: curl, jq
+# License: MIT
+#
+
+set -uo pipefail
+
+API_URL="${TERMUX_AI_URL:-http://127.0.0.1:8080/v1/chat/completions}"
+MODEL="${TERMUX_AI_MODEL:-}"
+SYSTEM_PROMPT="${TERMUX_AI_SYSTEM:-You are Termux AI, a concise assistant running fully offline on a local llama.cpp server. Answer briefly and accurately.}"
+TEMPERATURE="${TERMUX_AI_TEMPERATURE:-0.2}"
+MAX_TOKENS="${TERMUX_AI_MAX_TOKENS:-512}"
+TIMEOUT="${TERMUX_AI_TIMEOUT:-120}"
+
+die() {
+    printf 'error: %s\n' "$1" >&2
+    exit 1
+}
+
+command -v curl >/dev/null 2>&1 || die "curl not found. Install it with: pkg install curl"
+command -v jq >/dev/null 2>&1 || die "jq not found. Install it with: pkg install jq"
+
+HISTORY='[]'
+
+banner() {
+    printf '\033[36m'
+    printf 'Termux AI\n'
+    printf 'endpoint: %s\n' "$API_URL"
+    printf '\033[0m'
+    printf 'commands: /clear  reset history   /exit  quit\n'
+}
+
+chat_once() {
+    local text="$1"
+    local extra='{}'
+    [ -n "$MODEL" ] && extra=$(jq -n --arg m "$MODEL" '{model:$m}')
+    local body
+    body=$(jq -n \
+        --argjson e "$extra" \
+        --arg s "$SYSTEM_PROMPT" \
+        --argjson h "$HISTORY" \
+        --argjson t "$TEMPERATURE" \
+        --argjson m "$MAX_TOKENS" \
+        '$e + {messages: ([{role:"system",content:$s}] + $h), temperature:$t, max_tokens:$m, stream:false}')
+
+    local resp
+    resp=$(curl -sS --max-time "$TIMEOUT" "$API_URL" \
+        -H 'Content-Type: application/json' \
+        -d "$body" 2>&1)
+
+    if [ -z "$resp" ]; then
+        printf '\033[31mempty response from %s\033[0m\n' "$API_URL" >&2
+        return 1
+    fi
+
+    local err
+    err=$(jq -r 'if type=="object" then (.error // empty | if type=="object" then .message else . end) else empty end' <<<"$resp" 2>/dev/null)
+    if [ -n "${err:-}" ]; then
+        printf '\033[31mserver error: %s\033[0m\n' "$err" >&2
+        return 1
+    fi
+
+    local answer
+    answer=$(jq -r '.choices[0].message.content // empty' <<<"$resp" 2>/dev/null)
+    if [ -z "$answer" ]; then
+        printf '\033[31munexpected response format\033[0m\n' >&2
+        return 1
+    fi
+
+    printf '\033[32mAI>\033[0m %s\n' "$answer"
+    HISTORY=$(jq -c --arg c "$answer" '. + [{role:"assistant",content:$c}]' <<<"$HISTORY")
+    return 0
+}
+
+banner
+
+while :; do
+    printf '\n\033[36mYou>\033[0m '
+    IFS= read -r line || break
+
+    case "$line" in
+        ''|' '*|$'\t'*) continue ;;
+        /exit|/quit|exit|quit) break ;;
+        /clear)
+            HISTORY='[]'
+            printf 'history cleared\n'
+            continue
+            ;;
+        /help)
+            printf 'commands: /clear  /exit\n'
+            continue
+            ;;
+    esac
+
+    HISTORY=$(jq -c --arg c "$line" '. + [{role:"user",content:$c}]' <<<"$HISTORY")
+    chat_once "$line" || true
+done
+
+printf '\nbye.\n'
