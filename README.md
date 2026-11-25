@@ -1,5 +1,7 @@
 # Termux AI Harness
 
+**官网 / Landing page:** https://huangqia123.github.io/termux-ai-harness/
+
 > **English:** Turn an Android device into a fully offline AI terminal. A local llama.cpp server does the inference; `termuxai` chats, `termuxai-harness` turns plain language into shell commands you approve before they run. Everything stays on `127.0.0.1` — no internet, no uploads, no cloud API.
 
 把一台 Android 平板变成**完全离线的本地 AI 终端**：llama.cpp 在本机跑模型，`termuxai` 负责聊天，`termuxai-harness` 负责把你的自然语言翻译成 shell 命令并在你确认后执行。
