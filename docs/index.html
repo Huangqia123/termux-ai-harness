@@ -4,10 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Termux AI Harness — 完全离线的本地 AI 终端</title>
-<meta name="description" content="把 Android、Linux 或 Windows 变成完全离线的 AI 终端。本地 llama.cpp 推理，自然语言转 shell 命令，人工确认后执行。">
+<meta name="description" content="Turn any machine into a fully offline AI terminal. Local llama.cpp inference, natural language to shell commands, human in the loop.">
 <meta property="og:title" content="Termux AI Harness">
-<meta property="og:description" content="完全离线的本地 AI 终端。不联网、不上传、不需要 API key。">
+<meta property="og:description" content="Fully offline AI terminal. No cloud, no uploads, no API keys. Runs on Android, Linux, macOS and Windows.">
 <meta property="og:type" content="website">
+<link rel="canonical" href="https://huangqia123.github.io/termux-ai-harness/">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#9632;</text></svg>">
 <style>
 :root {
@@ -18,7 +19,6 @@
   --text: #e6e9ef;
   --muted: #8b94a7;
   --accent: #00e5a0;
-  --accent-dim: #00b37c;
   --blue: #5b9dff;
   --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
 }
@@ -59,7 +59,7 @@ nav {
   z-index: 50;
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
-  background: rgba(7, 8, 12, 0.72);
+  background: rgba(7, 8, 12, 0.78);
   border-bottom: 1px solid var(--line);
 }
 
@@ -82,6 +82,7 @@ nav {
   font-size: 15px;
   color: var(--text);
   text-decoration: none;
+  flex-shrink: 0;
 }
 
 .brand-mark {
@@ -97,15 +98,36 @@ nav {
   box-shadow: 0 0 18px rgba(0, 229, 160, 0.25);
 }
 
-.nav-links { display: flex; gap: 22px; font-size: 14px; }
+.nav-links { display: flex; gap: 22px; font-size: 14px; align-items: center; }
 .nav-links a { color: var(--muted); text-decoration: none; transition: color .2s; }
 .nav-links a:hover { color: var(--accent); }
 
-/* ---------- hero ---------- */
-header.hero {
-  padding: 96px 0 72px;
-  position: relative;
+.lang-switch {
+  display: inline-flex;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+  font-family: var(--mono);
+  font-size: 12px;
+  flex-shrink: 0;
+  background: var(--surface);
 }
+
+.lang-btn {
+  background: transparent;
+  border: 0;
+  color: var(--muted);
+  padding: 6px 11px;
+  cursor: pointer;
+  transition: all .15s;
+  font-family: inherit;
+  font-size: inherit;
+}
+.lang-btn.active { background: var(--accent); color: #04120c; font-weight: 600; }
+.lang-btn:hover:not(.active) { color: var(--text); }
+
+/* ---------- hero ---------- */
+header.hero { padding: 96px 0 72px; position: relative; }
 
 .eyebrow {
   display: inline-flex;
@@ -132,27 +154,24 @@ header.hero {
 @keyframes pulse { 0%,100% { opacity: 1 } 50% { opacity: .35 } }
 
 h1 {
-  font-size: clamp(34px, 6vw, 62px);
-  line-height: 1.12;
+  font-size: clamp(30px, 5.6vw, 58px);
+  line-height: 1.14;
   letter-spacing: -0.035em;
   font-weight: 800;
   margin-bottom: 22px;
 }
 
-h1 em {
-  font-style: normal;
-  color: var(--accent);
-  position: relative;
-}
+h1 em, h1 .accent { font-style: normal; color: var(--accent); }
 
 .hero-sub {
-  font-size: clamp(15px, 2.2vw, 18px);
+  font-size: clamp(15px, 2.2vw, 17.5px);
   color: var(--muted);
-  max-width: 620px;
+  max-width: 680px;
   margin-bottom: 34px;
 }
 
 .hero-sub strong { color: var(--text); font-weight: 600; }
+.hero-sub code { color: var(--accent); background: rgba(0,229,160,.07); padding: 1px 6px; border-radius: 4px; font-size: 13px; }
 
 .cta-row { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 54px; }
 
@@ -176,11 +195,7 @@ h1 em {
 }
 .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 34px rgba(0, 229, 160, 0.3); }
 
-.btn-ghost {
-  border-color: var(--line);
-  color: var(--text);
-  background: var(--surface);
-}
+.btn-ghost { border-color: var(--line); color: var(--text); background: var(--surface); }
 .btn-ghost:hover { border-color: #2c3444; background: var(--surface-2); transform: translateY(-2px); }
 
 /* ---------- terminal ---------- */
@@ -215,8 +230,6 @@ h1 em {
 .prompt { color: var(--accent); }
 .cmd { color: #dbe2ef; }
 .out { color: var(--muted); }
-.warnline { color: #ffb86b; }
-.success { color: var(--accent); }
 .cursor {
   display: inline-block;
   width: 7px; height: 15px;
@@ -241,16 +254,16 @@ section { padding: 72px 0; }
 }
 
 h2 {
-  font-size: clamp(26px, 3.6vw, 36px);
+  font-size: clamp(24px, 3.4vw, 34px);
   letter-spacing: -0.03em;
-  line-height: 1.25;
+  line-height: 1.28;
   margin-bottom: 12px;
 }
 
-.section-head p { color: var(--muted); max-width: 640px; }
+.section-head p { color: var(--muted); max-width: 660px; }
 
 /* ---------- feature grid ---------- */
-.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(228px, 1fr)); gap: 16px; }
 
 .card {
   background: var(--surface);
@@ -283,6 +296,7 @@ h2 {
 
 .card h3 { font-size: 17px; margin-bottom: 9px; letter-spacing: -0.01em; }
 .card p { color: var(--muted); font-size: 14px; }
+.card p code { color: var(--accent); background: rgba(0,229,160,.07); padding: 1px 5px; border-radius: 4px; font-size: 12.5px; }
 
 /* ---------- platform table ---------- */
 .table-wrap {
@@ -306,12 +320,7 @@ th {
   border-bottom: 1px solid var(--line);
 }
 
-td {
-  padding: 15px 18px;
-  border-bottom: 1px solid var(--line);
-  color: var(--text);
-}
-td:last-child, th:last-child { border-right: 0; }
+td { padding: 15px 18px; border-bottom: 1px solid var(--line); color: var(--text); }
 tr:last-child td { border-bottom: 0; }
 
 td code, .mono {
@@ -334,7 +343,7 @@ td code, .mono {
 }
 .badge.ok { color: var(--accent); border-color: rgba(0,229,160,.3); background: rgba(0,229,160,.07); }
 
-/* ---------- install tabs ---------- */
+/* ---------- install ---------- */
 .tabs { display: flex; gap: 6px; margin-bottom: -1px; flex-wrap: wrap; }
 
 .tab {
@@ -362,7 +371,7 @@ td code, .mono {
 
 .code-panel pre {
   font-family: var(--mono);
-  font-size: 13.5px;
+  font-size: 13px;
   line-height: 1.95;
   color: #dbe2ef;
   overflow-x: auto;
@@ -410,8 +419,9 @@ td code, .mono {
   color: #3a4355;
 }
 
-.chain-item h4 { font-size: 15px; margin-bottom: 6px; color: var(--accent); font-weight: 600; }
+.chain-item h4 { font-size: 15px; margin-bottom: 6px; color: var(--accent); font-weight: 600; padding-right: 26px; }
 .chain-item p { font-size: 13px; color: var(--muted); }
+.chain-item p code { color: var(--accent); background: rgba(0,229,160,.07); padding: 1px 5px; border-radius: 4px; font-size: 12px; }
 
 /* ---------- warning ---------- */
 .warning {
@@ -424,16 +434,12 @@ td code, .mono {
   align-items: flex-start;
   margin-top: 22px;
 }
-.warning .ico { color: #ffb86b; font-family: var(--mono); font-size: 15px; }
+.warning .ico { color: #ffb86b; font-family: var(--mono); font-size: 15px; flex-shrink: 0; }
 .warning p { color: #cfd6e4; font-size: 14px; }
 .warning strong { color: #ffb86b; }
 
 /* ---------- footer ---------- */
-footer {
-  border-top: 1px solid var(--line);
-  padding: 40px 0 60px;
-  margin-top: 40px;
-}
+footer { border-top: 1px solid var(--line); padding: 40px 0 60px; margin-top: 40px; }
 
 .foot-inner {
   display: flex;
@@ -452,12 +458,22 @@ footer {
 .reveal { opacity: 0; transform: translateY(18px); transition: opacity .7s ease, transform .7s ease; }
 .reveal.in { opacity: 1; transform: none; }
 
-@media (max-width: 720px) {
-  .nav-links { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  .reveal { opacity: 1; transform: none; transition: none; }
+  html { scroll-behavior: auto; }
+}
+
+@media (max-width: 760px) {
+  .nav-links a { display: none; }
+  .nav-links { gap: 10px; }
   header.hero { padding: 76px 0 48px; }
   section { padding: 52px 0; }
-  .term-body { font-size: 12.5px; }
+  .term-body { font-size: 11.5px; }
+  .terminal { font-size: 11.5px; }
+  .code-panel pre { font-size: 11.5px; }
   .btn { padding: 11px 18px; font-size: 14px; }
+  table { min-width: 560px; }
+  .brand { font-size: 14px; }
 }
 </style>
 </head>
@@ -470,34 +486,36 @@ footer {
       Termux AI Harness
     </a>
     <div class="nav-links">
-      <a href="#features">特性</a>
-      <a href="#platforms">平台</a>
-      <a href="#install">安装</a>
-      <a href="#chain">上线链路</a>
+      <a href="#features" data-i18n="nav.features">特性</a>
+      <a href="#platforms" data-i18n="nav.platforms">平台</a>
+      <a href="#install" data-i18n="nav.install">安装</a>
+      <a href="#chain" data-i18n="nav.deploy">上线链路</a>
       <a href="https://github.com/Huangqia123/termux-ai-harness" target="_blank" rel="noopener">GitHub</a>
+    </div>
+    <div class="lang-switch">
+      <button class="lang-btn active" data-lang="zh" aria-label="中文">中</button>
+      <button class="lang-btn" data-lang="en" aria-label="English">EN</button>
     </div>
   </div>
 </nav>
 
 <header class="hero" id="top">
   <div class="wrap">
-    <div class="eyebrow"><span class="dot"></span> v1.0.0 · 完全本地 · 无 API Key</div>
+    <div class="eyebrow">
+      <span class="dot"></span>
+      <span data-i18n="hero.badge">v1.0.0 · 完全本地 · 无 API Key</span>
+    </div>
 
-    <h1>把任何一台机器<br>变成<em>离线 AI 终端</em>。</h1>
+    <h1 data-i18n="hero.title">把任何一台机器<br>变成<span class="accent">离线 AI 终端</span>。</h1>
 
-    <p class="hero-sub">
+    <p class="hero-sub" data-i18n="hero.sub">
       一台平板、一台旧笔记本、一个开发板——只要能跑 llama.cpp，就能拥有自己的 AI。<br>
-      <strong>termuxai</strong> 负责对话，<strong>termuxai-harness</strong> 把自然语言变成 shell 命令，<br>
-      先给你看，按 <code class="mono">y</code> 才执行。
+      <strong>termuxai</strong> 负责对话，<strong>termuxai-harness</strong> 把自然语言变成 shell 命令，先给你看，按 <code>y</code> 才执行。
     </p>
 
     <div class="cta-row">
-      <a class="btn btn-primary" href="https://github.com/Huangqia123/termux-ai-harness/releases/tag/v1.0.0" target="_blank" rel="noopener">
-        下载 v1.0.0
-      </a>
-      <a class="btn btn-ghost" href="https://github.com/Huangqia123/termux-ai-harness" target="_blank" rel="noopener">
-        查看源码
-      </a>
+      <a class="btn btn-primary" href="https://github.com/Huangqia123/termux-ai-harness/releases/tag/v1.0.0" target="_blank" rel="noopener" data-i18n="hero.cta1">下载 v1.0.0</a>
+      <a class="btn btn-ghost" href="https://github.com/Huangqia123/termux-ai-harness" target="_blank" rel="noopener" data-i18n="hero.cta2">查看源码</a>
     </div>
 
     <div class="terminal">
@@ -513,7 +531,7 @@ footer {
         <div class="term-line"><span class="out">[Termux AI Harness] endpoint: http://127.0.0.1:8080/v1/chat/completions</span></div>
         <div class="term-line"><span class="out">[Termux AI Harness] mode: human in the loop</span></div>
         <div class="term-line">&nbsp;</div>
-        <div class="term-line"><span class="prompt">Task&gt;</span> <span class="cmd">看看当前目录里最大的文件</span></div>
+        <div class="term-line"><span class="prompt">Task&gt;</span> <span class="cmd" data-i18n="term.task">看看当前目录里最大的文件</span></div>
         <div class="term-line"><span class="out">generated&gt;</span></div>
         <div class="term-line"><span class="cmd">ls -S | head -n 1</span></div>
         <div class="term-line"><span class="out">run it? [y/N]</span> <span class="cmd">y</span></div>
@@ -530,30 +548,30 @@ footer {
   <div class="wrap">
     <div class="section-head reveal">
       <div class="section-label">Features</div>
-      <h2>为「真的能用」而设计</h2>
-      <p>不是又一个聊天框套壳。每个决定都围绕一个前提：这台机器可能是你唯一能用的那台。</p>
+      <h2 data-i18n="feat.h2">为「真的能用」而设计</h2>
+      <p data-i18n="feat.p">不是又一个聊天框套壳。每个决定都围绕一个前提：这台机器可能是你唯一能用的那台。</p>
     </div>
 
     <div class="grid">
       <div class="card reveal">
         <div class="card-ico">OFFLINE</div>
-        <h3>全链路 127.0.0.1</h3>
-        <p>推理在本机，请求不出网卡。断网、飞行模式、无 SIM 卡，照常工作。没有账号体系，没有配额，没有「本月额度已用尽」。</p>
+        <h3 data-i18n="feat.c1.t">全链路 127.0.0.1</h3>
+        <p data-i18n="feat.c1.d">推理在本机，请求不出网卡。断网、飞行模式、无 SIM 卡，照常工作。没有账号体系，没有配额，没有「本月额度已用尽」。</p>
       </div>
       <div class="card reveal">
         <div class="card-ico">GUARD</div>
-        <h3>人在回路</h3>
-        <p>生成的命令先打印出来，按 <code class="mono">y</code> 才执行。递归删除、磁盘格式化、关机重启、fork bomb 直接拒绝，连确认机会都不给。</p>
+        <h3 data-i18n="feat.c2.t">人在回路</h3>
+        <p data-i18n="feat.c2.d">生成的命令先打印出来，按 <code>y</code> 才执行。递归删除、磁盘格式化、关机重启、fork bomb 直接拒绝，连确认机会都不给。</p>
       </div>
       <div class="card reveal">
         <div class="card-ico">RETRY</div>
-        <h3>失败回灌</h3>
-        <p>命令报错时，把命令原文和输出一起交回模型，让它给出修正版本，最多重试 <code class="mono">TERMUX_AI_MAX_RETRY</code> 次。</p>
+        <h3 data-i18n="feat.c3.t">失败回灌</h3>
+        <p data-i18n="feat.c3.d">命令报错时，把命令原文和输出一起交回模型，让它给出修正版本，最多重试 <code>TERMUX_AI_MAX_RETRY</code> 次。</p>
       </div>
       <div class="card reveal">
         <div class="card-ico">CROSS</div>
-        <h3>一套逻辑，三种实现</h3>
-        <p>Termux / Linux / macOS 用 bash，Windows 用 PowerShell。接口地址、温度、超时全部走环境变量，两个平台行为一致。</p>
+        <h3 data-i18n="feat.c4.t">一套逻辑，两种实现</h3>
+        <p data-i18n="feat.c4.d">Termux / Linux / macOS 用 bash，Windows 用 PowerShell。接口地址、温度、超时全部走环境变量，两个平台行为一致。</p>
       </div>
     </div>
   </div>
@@ -563,18 +581,18 @@ footer {
   <div class="wrap">
     <div class="section-head reveal">
       <div class="section-label">Platforms</div>
-      <h2>你在哪台机器上，都行</h2>
-      <p>Windows 那套是独立实现，不是 bash 套壳——用 PowerShell 原生能力替代 curl 和 jq，不需要装 Git Bash 或 WSL。</p>
+      <h2 data-i18n="plt.h2">你在哪台机器上，都行</h2>
+      <p data-i18n="plt.p">Windows 那套是独立实现，不是 bash 套壳——用 PowerShell 原生能力替代 curl 和 jq，不需要装 Git Bash 或 WSL。</p>
     </div>
 
     <div class="table-wrap reveal">
       <table>
         <thead>
           <tr>
-            <th>平台</th>
-            <th>脚本</th>
-            <th>安装</th>
-            <th>依赖</th>
+            <th data-i18n="tbl.platform">平台</th>
+            <th data-i18n="tbl.script">脚本</th>
+            <th data-i18n="tbl.install">安装</th>
+            <th data-i18n="tbl.deps">依赖</th>
           </tr>
         </thead>
         <tbody>
@@ -600,7 +618,7 @@ footer {
             <td>Windows 10 / 11</td>
             <td><span class="badge">powershell</span></td>
             <td><code>windows\install.ps1</code></td>
-            <td><span class="badge">无额外依赖</span></td>
+            <td><span class="badge" data-i18n="tbl.nodeps">无额外依赖</span></td>
           </tr>
         </tbody>
       </table>
@@ -608,7 +626,7 @@ footer {
 
     <div class="warning reveal">
       <div class="ico">!</div>
-      <p><strong>黑名单是模式匹配，不是沙箱。</strong>换个写法的破坏性命令仍可能绕过去。它挡的是手滑和模型犯傻，不是恶意构造。执行前请自己看一眼那行命令。</p>
+      <p data-i18n="warn.text"><strong>黑名单是模式匹配，不是沙箱。</strong>换个写法的破坏性命令仍可能绕过去。它挡的是手滑和模型犯傻，不是恶意构造。执行前请自己看一眼那行命令。</p>
     </div>
   </div>
 </section>
@@ -617,42 +635,42 @@ footer {
   <div class="wrap">
     <div class="section-head reveal">
       <div class="section-label">Install</div>
-      <h2>三步，五分钟</h2>
-      <p>先起模型服务，再装工具，最后敲名字启动。模型文件不放进 git——几百 MB 到几 GB 的二进制不该被版本管理。</p>
+      <h2 data-i18n="ins.h2">三步，五分钟</h2>
+      <p data-i18n="ins.p">先起模型服务，再装工具，最后敲名字启动。模型文件不放进 git——几百 MB 到几 GB 的二进制不该被版本管理。</p>
     </div>
 
     <div class="tabs reveal">
-      <div class="tab active" data-tab="unix">Termux / Linux / macOS</div>
+      <div class="tab active" data-tab="unix" data-i18n="ins.tab1">Termux / Linux / macOS</div>
       <div class="tab" data-tab="win">Windows</div>
     </div>
 
     <div class="code-panel reveal">
-      <button class="copy-btn" data-copy="code-unix">copy</button>
+      <button class="copy-btn" data-copy="code-unix" data-i18n="ins.copy">copy</button>
       <pre id="code-unix"><span class="out"># 1. clone</span>
 git clone https://github.com/Huangqia123/termux-ai-harness.git
 cd termux-ai-harness
 
-<span class="out"># 2. install (Termux 会自动补 curl 和 jq)</span>
+<span class="out"># 2. install (Termux pulls curl and jq automatically)</span>
 bash install.sh
 
-<span class="out"># 3. 起模型服务，另开一个窗口挂着</span>
+<span class="out"># 3. start the model server in another window</span>
 llama-server -m qwen2.5-1.5b-instruct-q4_k_m.gguf -c 1024 --port 8080
 
-<span class="out"># 4. 开聊</span>
-termuxai              <span class="out"># 纯对话</span>
-termuxai-harness      <span class="out"># 命令 Agent</span></pre>
+<span class="out"># 4. run</span>
+termuxai              <span class="out"># chat</span>
+termuxai-harness      <span class="out"># command agent</span></pre>
 
       <pre id="code-win" style="display:none"><span class="out"># 1. clone</span>
 git clone https://github.com/Huangqia123/termux-ai-harness.git
 cd termux-ai-harness
 
-<span class="out"># 2. install (装到 %LOCALAPPDATA%\TermuxAI\bin，写用户级 PATH)</span>
+<span class="out"># 2. install (goes to %LOCALAPPDATA%\TermuxAI\bin, adds user PATH)</span>
 powershell -ExecutionPolicy Bypass -File windows\install.ps1
 
-<span class="out"># 3. 起模型服务</span>
+<span class="out"># 3. start the model server</span>
 llama-server.exe -m model.gguf -c 1024 --port 8080
 
-<span class="out"># 4. 重开一个终端，直接敲名字</span>
+<span class="out"># 4. reopen a terminal and run</span>
 termuxai
 termuxai-harness</pre>
     </div>
@@ -663,26 +681,26 @@ termuxai-harness</pre>
   <div class="wrap">
     <div class="section-head reveal">
       <div class="section-label">Deploy</div>
-      <h2>一个网页，不是写出来就能打开的</h2>
-      <p>页面在这台机器上只是一堆文件。要让别人点开链接看到它，得走完这条链路——这个站点本身也是这么上线的。</p>
+      <h2 data-i18n="chain.h2">一个网页，不是写出来就能打开的</h2>
+      <p data-i18n="chain.p">页面在这台机器上只是一堆文件。要让别人点开链接看到它，得走完这条链路——这个站点本身也是这么上线的。</p>
     </div>
 
     <div class="chain reveal">
       <div class="chain-item">
-        <h4>本地生成页面</h4>
-        <p>HTML / CSS / JS 落在你的磁盘上，浏览器直接打开就能看见，但只有你能看见。</p>
+        <h4 data-i18n="chain.c1.t">本地生成页面</h4>
+        <p data-i18n="chain.c1.d">HTML / CSS / JS 落在你的磁盘上，浏览器直接打开就能看见，但只有你能看见。</p>
       </div>
       <div class="chain-item">
-        <h4>推到 GitHub</h4>
-        <p>代码进仓库，别人能查看、能改、能提 PR。这一步解决的是「可获取」。</p>
+        <h4 data-i18n="chain.c2.t">推到 GitHub</h4>
+        <p data-i18n="chain.c2.d">代码进仓库，别人能查看、能改、能提 PR。这一步解决的是「可获取」。</p>
       </div>
       <div class="chain-item">
-        <h4>托管服务</h4>
-        <p>GitHub Pages 或 Cloudflare Pages 把仓库变成可访问的站点，分配一个 <code>username.github.io</code> 这样的域名。</p>
+        <h4 data-i18n="chain.c3.t">托管服务</h4>
+        <p data-i18n="chain.c3.d">GitHub Pages 或 Cloudflare Pages 把仓库变成可访问的站点，分配一个 <code>username.github.io</code> 这样的域名。</p>
       </div>
       <div class="chain-item">
-        <h4>绑定域名</h4>
-        <p>想让入口好记，就在 DNS 里加 CNAME 指向托管地址，再配一张 HTTPS 证书。</p>
+        <h4 data-i18n="chain.c4.t">绑定域名</h4>
+        <p data-i18n="chain.c4.d">想让入口好记，就在 DNS 里加 CNAME 指向托管地址，再配一张 HTTPS 证书。</p>
       </div>
     </div>
   </div>
@@ -695,8 +713,8 @@ termuxai-harness</pre>
       <div>MIT License · 2026 · <a href="https://github.com/Huangqia123" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:none;">Huangqia123</a></div>
     </div>
     <div class="foot-links">
-      <a href="https://github.com/Huangqia123/termux-ai-harness" target="_blank" rel="noopener">Repository</a>
-      <a href="https://github.com/Huangqia123/termux-ai-harness/releases" target="_blank" rel="noopener">Releases</a>
+      <a href="https://github.com/Huangqia123/termux-ai-harness" target="_blank" rel="noopener" data-i18n="foot.repo">仓库</a>
+      <a href="https://github.com/Huangqia123/termux-ai-harness/releases" target="_blank" rel="noopener" data-i18n="foot.releases">发布</a>
       <a href="https://github.com/Huangqia123/termux-ai-harness/blob/main/PLATFORMS.md" target="_blank" rel="noopener">Platforms</a>
       <a href="https://github.com/Huangqia123/termux-ai-harness/blob/main/MODELS.md" target="_blank" rel="noopener">Models</a>
       <a href="https://github.com/Huangqia123/termux-ai-harness/blob/main/LICENSE" target="_blank" rel="noopener">License</a>
@@ -705,34 +723,170 @@ termuxai-harness</pre>
 </footer>
 
 <script>
-// tab switching
-const tabs = document.querySelectorAll('.tab');
-tabs.forEach(tab => {
-  tab.addEventListener('click', () => {
-    tabs.forEach(t => t.classList.remove('active'));
+const I18N = {
+  zh: {
+    "nav.features": "特性",
+    "nav.platforms": "平台",
+    "nav.install": "安装",
+    "nav.deploy": "上线链路",
+
+    "hero.badge": "v1.0.0 · 完全本地 · 无 API Key",
+    "hero.title": "把任何一台机器<br>变成<span class=\"accent\">离线 AI 终端</span>。",
+    "hero.sub": "一台平板、一台旧笔记本、一个开发板——只要能跑 llama.cpp，就能拥有自己的 AI。<br><strong>termuxai</strong> 负责对话，<strong>termuxai-harness</strong> 把自然语言变成 shell 命令，先给你看，按 <code>y</code> 才执行。",
+    "hero.cta1": "下载 v1.0.0",
+    "hero.cta2": "查看源码",
+    "term.task": "看看当前目录里最大的文件",
+
+    "feat.h2": "为「真的能用」而设计",
+    "feat.p": "不是又一个聊天框套壳。每个决定都围绕一个前提：这台机器可能是你唯一能用的那台。",
+    "feat.c1.t": "全链路 127.0.0.1",
+    "feat.c1.d": "推理在本机，请求不出网卡。断网、飞行模式、无 SIM 卡，照常工作。没有账号体系，没有配额，没有「本月额度已用尽」。",
+    "feat.c2.t": "人在回路",
+    "feat.c2.d": "生成的命令先打印出来，按 <code>y</code> 才执行。递归删除、磁盘格式化、关机重启、fork bomb 直接拒绝，连确认机会都不给。",
+    "feat.c3.t": "失败回灌",
+    "feat.c3.d": "命令报错时，把命令原文和输出一起交回模型，让它给出修正版本，最多重试 <code>TERMUX_AI_MAX_RETRY</code> 次。",
+    "feat.c4.t": "一套逻辑，两种实现",
+    "feat.c4.d": "Termux / Linux / macOS 用 bash，Windows 用 PowerShell。接口地址、温度、超时全部走环境变量，两个平台行为一致。",
+
+    "plt.h2": "你在哪台机器上，都行",
+    "plt.p": "Windows 那套是独立实现，不是 bash 套壳——用 PowerShell 原生能力替代 curl 和 jq，不需要装 Git Bash 或 WSL。",
+    "tbl.platform": "平台",
+    "tbl.script": "脚本",
+    "tbl.install": "安装",
+    "tbl.deps": "依赖",
+    "tbl.nodeps": "无额外依赖",
+    "warn.text": "<strong>黑名单是模式匹配，不是沙箱。</strong>换个写法的破坏性命令仍可能绕过去。它挡的是手滑和模型犯傻，不是恶意构造。执行前请自己看一眼那行命令。",
+
+    "ins.h2": "三步，五分钟",
+    "ins.p": "先起模型服务，再装工具，最后敲名字启动。模型文件不放进 git——几百 MB 到几 GB 的二进制不该被版本管理。",
+    "ins.tab1": "Termux / Linux / macOS",
+    "ins.copy": "copy",
+
+    "chain.h2": "一个网页，不是写出来就能打开的",
+    "chain.p": "页面在这台机器上只是一堆文件。要让别人点开链接看到它，得走完这条链路——这个站点本身也是这么上线的。",
+    "chain.c1.t": "本地生成页面",
+    "chain.c1.d": "HTML / CSS / JS 落在你的磁盘上，浏览器直接打开就能看见，但只有你能看见。",
+    "chain.c2.t": "推到 GitHub",
+    "chain.c2.d": "代码进仓库，别人能查看、能改、能提 PR。这一步解决的是「可获取」。",
+    "chain.c3.t": "托管服务",
+    "chain.c3.d": "GitHub Pages 或 Cloudflare Pages 把仓库变成可访问的站点，分配一个 <code>username.github.io</code> 这样的域名。",
+    "chain.c4.t": "绑定域名",
+    "chain.c4.d": "想让入口好记，就在 DNS 里加 CNAME 指向托管地址，再配一张 HTTPS 证书。",
+
+    "foot.repo": "仓库",
+    "foot.releases": "发布"
+  },
+
+  en: {
+    "nav.features": "Features",
+    "nav.platforms": "Platforms",
+    "nav.install": "Install",
+    "nav.deploy": "Deploy",
+
+    "hero.badge": "v1.0.0 · Fully local · No API key",
+    "hero.title": "Turn any machine into<br>an <span class=\"accent\">offline AI terminal</span>.",
+    "hero.sub": "A tablet, an old laptop, a single-board computer — if it runs llama.cpp, it can run your own AI.<br><strong>termuxai</strong> handles the conversation. <strong>termuxai-harness</strong> turns plain language into shell commands, shows you the command, and runs it only after you press <code>y</code>.",
+    "hero.cta1": "Download v1.0.0",
+    "hero.cta2": "View source",
+    "term.task": "find the largest file in this directory",
+
+    "feat.h2": "Built for machines you actually own",
+    "feat.p": "Not another chat box wrapper. Every decision assumes one thing: this machine might be the only one you have.",
+    "feat.c1.t": "Everything on 127.0.0.1",
+    "feat.c1.d": "Inference runs locally; requests never leave the network card. Airplane mode, no SIM, no wifi — it still works. No account, no quota, no “you have reached your monthly limit”.",
+    "feat.c2.t": "Human in the loop",
+    "feat.c2.d": "The generated command is printed first and runs only after you press <code>y</code>. Recursive deletes, disk formatting, shutdown, fork bombs are refused outright — with no confirmation prompt at all.",
+    "feat.c3.t": "Failure feedback",
+    "feat.c3.d": "When a command fails, its text and output go back to the model for a corrected attempt, up to <code>TERMUX_AI_MAX_RETRY</code> times.",
+    "feat.c4.t": "One design, two implementations",
+    "feat.c4.d": "bash for Termux / Linux / macOS, PowerShell for Windows. Endpoint, temperature and timeout are all environment variables, and both platforms behave identically.",
+
+    "plt.h2": "Whatever you are running it on",
+    "plt.p": "The Windows build is a separate implementation, not a bash wrapper — native PowerShell replaces curl and jq, so no Git Bash or WSL required.",
+    "tbl.platform": "Platform",
+    "tbl.script": "Script",
+    "tbl.install": "Install",
+    "tbl.deps": "Requires",
+    "tbl.nodeps": "no extra deps",
+    "warn.text": "<strong>The blacklist is pattern matching, not a sandbox.</strong> A reworded destructive command can still slip through. It stops slips and model mistakes, not deliberate construction. Read the command before confirming.",
+
+    "ins.h2": "Three steps, five minutes",
+    "ins.p": "Start the model server, install the tools, then type the command name. Model files never enter git — hundreds of megabytes to several gigabytes of binary do not belong in version control.",
+    "ins.tab1": "Termux / Linux / macOS",
+    "ins.copy": "copy",
+
+    "chain.h2": "A web page is not a website yet",
+    "chain.p": "On your disk, the page is just files. Before anyone can open a link and see it, the whole chain has to be closed — this site went live exactly this way.",
+    "chain.c1.t": "Generate locally",
+    "chain.c1.d": "HTML / CSS / JS sit on your disk. The browser can open them, but only you can see them.",
+    "chain.c2.t": "Push to GitHub",
+    "chain.c2.d": "Code enters a repository: others can read it, fork it, send pull requests. This step makes it available.",
+    "chain.c3.t": "Host it",
+    "chain.c3.d": "GitHub Pages or Cloudflare Pages turns the repo into a reachable site and hands you a domain like <code>username.github.io</code>.",
+    "chain.c4.t": "Bind a domain",
+    "chain.c4.d": "For a memorable entry point, add a CNAME record pointing at the host and provision an HTTPS certificate.",
+
+    "foot.repo": "Repository",
+    "foot.releases": "Releases"
+  }
+};
+
+let currentLang = 'zh';
+
+function applyLang(lang) {
+  const dict = I18N[lang];
+  if (!dict) return;
+  currentLang = lang;
+  document.querySelectorAll('[data-i18n]').forEach(function (el) {
+    var key = el.getAttribute('data-i18n');
+    if (dict[key] !== undefined) el.innerHTML = dict[key];
+  });
+  document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+  document.title = lang === 'zh'
+    ? 'Termux AI Harness — 完全离线的本地 AI 终端'
+    : 'Termux AI Harness — Fully offline AI terminal';
+  document.querySelectorAll('.lang-btn').forEach(function (b) {
+    b.classList.toggle('active', b.getAttribute('data-lang') === lang);
+  });
+  try { localStorage.setItem('tah-lang', lang); } catch (e) {}
+}
+
+document.querySelectorAll('.lang-btn').forEach(function (btn) {
+  btn.addEventListener('click', function () { applyLang(btn.getAttribute('data-lang')); });
+});
+
+var initialLang = 'zh';
+try {
+  var saved = localStorage.getItem('tah-lang');
+  if (saved === 'en' || saved === 'zh') initialLang = saved;
+} catch (e) {}
+applyLang(initialLang);
+
+// tabs
+var tabs = document.querySelectorAll('.tab');
+tabs.forEach(function (tab) {
+  tab.addEventListener('click', function () {
+    tabs.forEach(function (t) { t.classList.remove('active'); });
     tab.classList.add('active');
-    const which = tab.dataset.tab;
+    var which = tab.getAttribute('data-tab');
     document.getElementById('code-unix').style.display = which === 'unix' ? 'block' : 'none';
     document.getElementById('code-win').style.display = which === 'win' ? 'block' : 'none';
-    document.querySelector('.copy-btn').dataset.copy = which === 'unix' ? 'code-unix' : 'code-win';
+    document.querySelector('.copy-btn').setAttribute('data-copy', which === 'unix' ? 'code-unix' : 'code-win');
   });
 });
 
-// copy button
-document.querySelector('.copy-btn').addEventListener('click', function () {
-  const target = document.getElementById(this.dataset.copy);
-  const text = target.innerText;
-  const done = () => {
-    this.textContent = 'copied';
-    setTimeout(() => { this.textContent = 'copy'; }, 1400);
-  };
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(text).then(done).catch(fallback);
-  } else {
-    fallback();
+// copy
+var copyBtn = document.querySelector('.copy-btn');
+copyBtn.addEventListener('click', function () {
+  var self = this;
+  var target = document.getElementById(self.getAttribute('data-copy'));
+  var text = target.textContent;
+  function done() {
+    self.textContent = currentLang === 'zh' ? '已复制' : 'copied';
+    setTimeout(function () { self.textContent = I18N[currentLang]['ins.copy']; }, 1400);
   }
   function fallback() {
-    const ta = document.createElement('textarea');
+    var ta = document.createElement('textarea');
     ta.value = text;
     ta.style.position = 'fixed';
     ta.style.opacity = '0';
@@ -741,22 +895,27 @@ document.querySelector('.copy-btn').addEventListener('click', function () {
     try { document.execCommand('copy'); done(); } catch (e) {}
     document.body.removeChild(ta);
   }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(done).catch(fallback);
+  } else {
+    fallback();
+  }
 });
 
 // scroll reveal
-const io = new IntersectionObserver((entries) => {
-  entries.forEach(e => {
-    if (e.isIntersecting) {
-      e.target.classList.add('in');
-      io.unobserve(e.target);
-    }
+if ('IntersectionObserver' in window) {
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+    });
+  }, { threshold: 0.12 });
+  document.querySelectorAll('.reveal').forEach(function (el, i) {
+    el.style.transitionDelay = (i % 4) * 60 + 'ms';
+    io.observe(el);
   });
-}, { threshold: 0.12 });
-
-document.querySelectorAll('.reveal').forEach((el, i) => {
-  el.style.transitionDelay = (i % 4) * 60 + 'ms';
-  io.observe(el);
-});
+} else {
+  document.querySelectorAll('.reveal').forEach(function (el) { el.classList.add('in'); });
+}
 </script>
 
 </body>
