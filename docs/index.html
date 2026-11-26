@@ -410,6 +410,20 @@ td code, .mono {
 .warning p { color: #cfd6e4; font-size: 14px; }
 .warning strong { color: #ffb86b; }
 
+.note {
+  border: 1px solid rgba(91, 157, 255, 0.25);
+  background: rgba(91, 157, 255, 0.05);
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  margin-top: 14px;
+}
+.note .ico { color: var(--blue); font-family: var(--mono); font-size: 13px; flex-shrink: 0; }
+.note p { color: #c6d0e2; font-size: 13.5px; }
+.note strong { color: var(--blue); }
+
 /* ---------- footer ---------- */
 footer { border-top: 1px solid var(--line); padding: 40px 0 60px; margin-top: 40px; }
 
@@ -613,6 +627,10 @@ footer { border-top: 1px solid var(--line); padding: 40px 0 60px; margin-top: 40
       <div class="ico">!</div>
       <p data-i18n="warn.text"><strong>黑名单是模式匹配，不是沙箱。</strong>换个写法的破坏性命令仍可能绕过去。它挡的是手滑和模型犯傻，不是恶意构造。执行前请自己看一眼那行命令。</p>
     </div>
+    <div class="note reveal">
+      <div class="ico">-</div>
+      <p data-i18n="plt.unsupported"><strong>目前未适配：纯血鸿蒙（HarmonyOS NEXT）、iOS / iPadOS。</strong>这两个系统没有可用的 POSIX shell 环境，装不了 llama.cpp，也跑不了这两个脚本。Android 请走 Termux；鸿蒙上如果硬要试，只能借助第三方兼容层，不在本项目的承诺范围内。</p>
+    </div>
   </div>
 </section>
 
@@ -718,6 +736,7 @@ const I18N = {
     "tbl.script": "脚本",
     "tbl.install": "安装",
     "tbl.deps": "依赖",
+    "plt.unsupported": "<strong>目前未适配：纯血鸿蒙（HarmonyOS NEXT）、iOS / iPadOS。</strong>这两个系统没有可用的 POSIX shell 环境，装不了 llama.cpp，也跑不了这两个脚本。Android 请走 Termux；鸿蒙上如果硬要试，只能借助第三方兼容层，不在本项目的承诺范围内。",
     "tbl.nodeps": "无额外依赖",
     "warn.text": "<strong>黑名单是模式匹配，不是沙箱。</strong>换个写法的破坏性命令仍可能绕过去。它挡的是手滑和模型犯傻，不是恶意构造。执行前请自己看一眼那行命令。",
 
@@ -767,6 +786,7 @@ const I18N = {
     "tbl.script": "Script",
     "tbl.install": "Install",
     "tbl.deps": "Requires",
+    "plt.unsupported": "<strong>Not supported: HarmonyOS NEXT, iOS / iPadOS.</strong> Neither exposes a POSIX shell, so llama.cpp cannot be installed and these scripts cannot run. On Android use Termux; a third-party compatibility layer on HarmonyOS is out of scope here.",
     "tbl.nodeps": "no extra deps",
     "warn.text": "<strong>The blacklist is pattern matching, not a sandbox.</strong> A reworded destructive command can still slip through. It stops slips and model mistakes, not deliberate construction. Read the command before confirming.",
 

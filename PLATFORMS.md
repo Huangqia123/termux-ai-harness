@@ -123,3 +123,10 @@ bash 里设置：
 ```bash
 export TERMUX_AI_URL=http://127.0.0.1:8080/v1/chat/completions
 ```
+
+## 暂不支持的平台
+
+- **纯血鸿蒙（HarmonyOS NEXT）**：没有可用的 POSIX shell，装不了 llama.cpp，脚本也无处落地。第三方兼容层方案属于计划外。
+- **iOS / iPadOS**：App 沙箱不允许 fork/exec 外部二进制，`curl` + `jq` + `bash` 这套链路跑不起来。
+
+这两项不是待办，是环境本身不满足，别等。

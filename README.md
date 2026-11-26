@@ -56,8 +56,12 @@ termuxai-harness  (curl)
 | Linux（Debian/Arch/Fedora 等） | 同上（bash） | `bash install.sh` 或 `bash install.sh --system` |
 | macOS | 同上（bash） | `bash install.sh` |
 | Windows 10/11 | `windows/termuxai.ps1`、`windows/termuxai-harness.ps1`（PowerShell 5.1+ / 7+） | `powershell -ExecutionPolicy Bypass -File windows/install.ps1` |
+| 纯血鸿蒙（HarmonyOS NEXT） | — | 未适配：没有可用的 POSIX shell，装不了 llama.cpp |
+| iOS / iPadOS | — | 未适配：App 沙箱里跑不了这套脚本 |
 
 Linux/macOS 默认装到 `~/.local/bin`，不需要 sudo；`--system` 装到 `/usr/local/bin`。Termux 固定装 `$PREFIX/bin`。Windows 装到 `%LOCALAPPDATA%\TermuxAI\bin` 并加入用户 PATH，附带 `.cmd` 启动器，在 cmd 里也能直接敲 `termuxai`。
+
+只要设备能提供一个 POSIX shell 并跑得动 llama.cpp，就能用。纯血鸿蒙和 iOS 不在名单里——不是没做，是这两个系统上根本没有让 llama.cpp 落地的地方；鸿蒙靠第三方兼容层运行，属于计划外。
 
 两个平台的脚本逻辑一致，环境变量也完全一致，细节见 [PLATFORMS.md](PLATFORMS.md)。
 
