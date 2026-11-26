@@ -4,10 +4,12 @@ import android.app.Activity;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.content.ClipData;
 import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
+import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -31,6 +33,8 @@ public class MainActivity extends Activity {
     private static final int MAX_TEXT = 3500;
 
     private WebView web;
+    private android.webkit.ValueCallback<Uri[]> filePathCallback;
+    private static final int REQ_FILE = 1024;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -48,8 +52,49 @@ public class MainActivity extends Activity {
         s.setUserAgentString(UA);
         web.addJavascriptInterface(new Bridge(), "AndroidApi");
         web.setWebViewClient(new WebViewClient());
+        web.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public boolean onShowFileChooser(WebView view, android.webkit.ValueCallback<Uri[]> cb,
+                                             FileChooserParams params) {
+                if (filePathCallback != null) {
+                    filePathCallback.onReceiveValue(null);
+                }
+                filePathCallback = cb;
+                try {
+                    startActivityForResult(params.createIntent(), REQ_FILE);
+                } catch (Exception e) {
+                    filePathCallback = null;
+                    return false;
+                }
+                return true;
+            }
+        });
         web.loadUrl("file:///android_asset/index.html");
         setContentView(web);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == REQ_FILE) {
+            Uri[] results = null;
+            if (resultCode == RESULT_OK && data != null) {
+                if (data.getData() != null) {
+                    results = new Uri[]{data.getData()};
+                } else if (data.getClipData() != null) {
+                    ClipData clip = data.getClipData();
+                    results = new Uri[clip.getItemCount()];
+                    for (int i = 0; i < clip.getItemCount(); i++) {
+                        results[i] = clip.getItemAt(i).getUri();
+                    }
+                }
+            }
+            if (filePathCallback != null) {
+                filePathCallback.onReceiveValue(results);
+                filePathCallback = null;
+            }
+            return;
+        }
+        super.onActivityResult(requestCode, resultCode, data);
     }
 
     @Override
