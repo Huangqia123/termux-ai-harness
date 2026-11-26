@@ -11,6 +11,13 @@
 - **字段兜底**：读取回复时同时尝试 `.choices[0].message.content` 与 `.choices[0].text`，兼容不同 llama.cpp 构建的返回格式
 - Windows PowerShell 版同步上述逻辑，`ConvertFrom-Reply` 负责分流
 
+### 图形界面（GUI）
+- 新增 Electron 桌面应用 `app/`：模型扫描 → 自动下载 → 拉起 `llama-server` → 自动进聊天，全程无感
+- 启动即自动：本地有 1 个模型直接用，有 2 个以上让你挑，没有就按内存从官网 6 个里选推荐档自动下载
+- `8080` 被占用时自动顺延到 `8081~8091`，不再直接报 `couldn't bind HTTP server socket`
+- 交付 5 个二进制：Android APK、Windows x64 zip、macOS x64/arm64 zip、Linux AppImage + deb，全部挂在 v1.0.1 这一版
+- Android APK 是界面壳：不内嵌 llama.cpp，通过 `127.0.0.1` 连 Termux 里的引擎，可用 RUN_COMMAND 让 Termux 代启服务
+
 ### 模型
 - 高配档改用 **Qwen2.5-3B-Instruct Q4_K_M**（约 1.8~2.1GB），比 1.5B 明显更能守格式、少复读
 - 荣耀平板 X9 实测（Qwen2.5-3B Q4_K_M，`-c 2048`）：常规 9–15 token/s，短提示命中缓存时可冲到 46–50 token/s

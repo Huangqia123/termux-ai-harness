@@ -1,0 +1,69 @@
+{
+  "name": "termux-ai-harness-app",
+  "version": "1.0.1",
+  "description": "Termux AI Harness desktop app — offline AI terminal with model bootstrap",
+  "main": "main.js",
+  "author": {
+    "name": "Huangqia123",
+    "email": "tryq_0813@qq.com"
+  },
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder"
+  },
+  "devDependencies": {
+    "electron": "^31.7.7",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "io.github.huangqia123.termuxaiharness",
+    "productName": "Termux AI Harness",
+    "directories": {
+      "output": "dist-app"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer/**/*"
+    ],
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Utility",
+      "synopsis": "Offline AI terminal",
+      "description": "Run a local llama.cpp model and chat with it, fully offline.",
+      "maintainer": "Huangqia123 <tryq_0813@qq.com>",
+      "icon": "build/icons"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "zip",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "signAndEditExecutable": false,
+      "icon": "build/icons/icon.png"
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "zip",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "category": "public.app-category.developer-tools",
+      "icon": "build/icons/icon.png"
+    },
+    "artifactName": "TermuxAIHarness-${version}-${os}-${arch}.${ext}"
+  },
+  "homepage": "https://huangqia123.github.io/termux-ai-harness/"
+}

@@ -41,6 +41,31 @@ termuxai-harness  (curl)
       └─ CMD:   → 黑名单检查 → 展示 → 你按 y → bash -c 执行 → 输出回显
 ```
 
+## 图形界面（v1.0.1）
+
+不想敲命令行也能用。桌面端双击即开，安卓端装 APK。
+
+| 平台 | 下载文件 | 说明 |
+| --- | --- | --- |
+| Android | `TermuxAIHarness-1.0.1-android.apk` | 界面壳，推理仍走 Termux 里的 `llama-server`；打开后自动扫描 `8080–8091` |
+| Windows 10/11 | `TermuxAIHarness-1.0.1-win-x64.zip` | 解压双击 `.exe`。未签名，SmartScreen 会拦一次 |
+| macOS | `TermuxAIHarness-1.0.1-mac-arm64.zip`（Apple 芯片）<br>`TermuxAIHarness-1.0.1-mac-x64.zip`（Intel） | 未签名且未公证，首次需右键 → 打开 |
+| Linux | `TermuxAIHarness-1.0.1-linux-x86_64.AppImage`<br>`TermuxAIHarness-1.0.1-linux-amd64.deb` | AppImage 记得 `chmod +x`；deb 走 `sudo dpkg -i` |
+
+全部挂在 [v1.0.1 release](https://github.com/Huangqia123/termux-ai-harness/releases/tag/v1.0.1)。
+
+### 打开就进聊天
+
+启动后什么都不用点：
+
+1. 扫本地 GGUF —— 应用目录、`~/models`、`~/.termux-ai/models`、`~/.local/share/termux-ai/models`、`~/storage/downloads`
+2. 只找到 1 个 → 直接用；找到 2 个以上 → 列出来让你挑
+3. 一个都没有 → 列出官网那 6 个，按内存自动选推荐档并直接下载（`.part` 临时文件，下完自动改名）
+4. 拉起 `llama-server`，`8080` 被占就顺延 `8081~8091`，轮询 `/health` 最多 90 秒
+5. 就绪 → 自动切到聊天界面
+
+引擎不内嵌在安装包里：桌面端用系统上已有的 `llama-server`（`PATH`、`~/.local/bin`、`/usr/local/bin` 都会找，也能手动指定）；安卓端用 Termux 里编好的那一份。这样安装包才 100MB 左右，而不是塞进一个 2GB 的模型和一套推理库。
+
 ## 聊天和命令走两条路
 
 模型每条回复都以 `CMD:` 或 `TEXT:` 开头，harness 按前缀分流：
