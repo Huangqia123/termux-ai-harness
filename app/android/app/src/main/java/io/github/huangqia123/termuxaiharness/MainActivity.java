@@ -36,7 +36,9 @@ public class MainActivity extends Activity {
     private static final String PREFS = "tah";
     private static final String KEY_HOST = "host";
     private static final String KEY_PORT = "port";
+    private static final String KEY_PATH = "path";
     private static final String DEFAULT_HOST = "127.0.0.1";
+    private static final String DEFAULT_PATH = "/v1";
     private static final int DEFAULT_PORT = 8080;
     private static final int MAX_PORT = 8091;
     private static final String TERMUX_PKG = "com.termux";
@@ -46,6 +48,7 @@ public class MainActivity extends Activity {
 
     private volatile String cfgHost = DEFAULT_HOST;
     private volatile int cfgPort = DEFAULT_PORT;
+    private volatile String cfgPath = DEFAULT_PATH;
     private volatile String activeHost = null;
     private volatile int activePort = -1;
     private volatile boolean autoStarted = false;
@@ -62,6 +65,7 @@ public class MainActivity extends Activity {
         prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
         cfgHost = prefs.getString(KEY_HOST, DEFAULT_HOST);
         cfgPort = prefs.getInt(KEY_PORT, DEFAULT_PORT);
+        cfgPath = prefs.getString(KEY_PATH, DEFAULT_PATH);
 
         web = new WebView(this);
         WebSettings s = web.getSettings();
@@ -115,8 +119,22 @@ public class MainActivity extends Activity {
         }
     }
 
+    private static String normalizePath(String raw) {
+        String p = raw == null ? "" : raw.trim();
+        while (p.endsWith("/")) p = p.substring(0, p.length() - 1);
+        if (p.endsWith("/chat/completions")) p = p.substring(0, p.length() - "/chat/completions".length());
+        if (p.endsWith("/completions")) p = p.substring(0, p.length() - "/completions".length());
+        if (p.isEmpty()) p = DEFAULT_PATH;
+        if (!p.startsWith("/")) p = "/" + p;
+        return p;
+    }
+
+    private static String baseUrl(String host, int port, String path) {
+        return "http://" + host + ":" + port + normalizePath(path);
+    }
+
     private boolean isLlama(String host, int port) {
-        String r = fetch("http://" + host + ":" + port + "/v1/models", null, 350);
+        String r = fetch(baseUrl(host, port, cfgPath) + "/models", null, 350);
         if (r == null) return false;
         try {
             JSONObject j = new JSONObject(r);
@@ -168,7 +186,8 @@ public class MainActivity extends Activity {
             o.put("activeHost", activeHost == null ? "" : activeHost);
             o.put("activePort", activePort);
             o.put("ok", activePort > 0);
-            o.put("url", "http://" + cfgHost + ":" + cfgPort);
+            o.put("path", cfgPath);
+            o.put("url", baseUrl(cfgHost, cfgPort, cfgPath));
             o.put("termux", isTermuxInstalled());
             o.put("autoStarted", autoStarted);
         } catch (Exception ignored) {}
@@ -193,15 +212,17 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public String setEndpoint(String input) {
             String s = input == null ? "" : input.trim();
-            if (s.startsWith("http://")) s = s.substring(7);
             if (s.startsWith("https://")) s = s.substring(8);
+            else if (s.startsWith("http://")) s = s.substring(7);
+
             int slash = s.indexOf('/');
-            if (slash >= 0) s = s.substring(0, slash);
+            String hostPort = slash >= 0 ? s.substring(0, slash) : s;
+            String rawPath = slash >= 0 ? s.substring(slash) : "";
 
             String h = DEFAULT_HOST;
             int p = DEFAULT_PORT;
-            if (s.contains(":")) {
-                String[] parts = s.split(":");
+            if (hostPort.contains(":")) {
+                String[] parts = hostPort.split(":");
                 if (parts.length >= 2) {
                     h = parts[0].trim();
                     try {
@@ -210,15 +231,17 @@ public class MainActivity extends Activity {
                         p = DEFAULT_PORT;
                     }
                 }
-            } else if (s.length() > 0) {
-                h = s;
+            } else if (hostPort.length() > 0) {
+                h = hostPort;
             }
             if (h.isEmpty()) h = DEFAULT_HOST;
             if (p < 1 || p > 65535) p = DEFAULT_PORT;
 
+            String path = normalizePath(rawPath);
             cfgHost = h;
             cfgPort = p;
-            prefs.edit().putString(KEY_HOST, h).putInt(KEY_PORT, p).apply();
+            cfgPath = path;
+            prefs.edit().putString(KEY_HOST, h).putInt(KEY_PORT, p).putString(KEY_PATH, path).apply();
 
             probePort();
             return configJson().toString();
@@ -284,7 +307,7 @@ public class MainActivity extends Activity {
             }
             new Thread(new Runnable() {
                 public void run() {
-                    String r = fetch("http://" + host + ":" + port + "/v1/chat/completions", messagesJson, 5000);
+                    String r = fetch(baseUrl(host, port, cfgPath) + "/chat/completions", messagesJson, 5000);
                     if (r == null) {
                         sendResult(cbId, "请求失败：连不上 " + host + ":" + port, null);
                         return;
