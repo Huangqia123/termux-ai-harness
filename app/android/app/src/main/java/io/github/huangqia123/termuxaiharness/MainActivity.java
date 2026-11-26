@@ -424,7 +424,12 @@ public class MainActivity extends Activity {
                                 if (ch == null || ch.length() == 0) continue;
                                 JSONObject o = ch.getJSONObject(0);
                                 JSONObject delta = o.optJSONObject("delta");
-                                String piece = delta != null ? delta.optString("content", "") : o.optString("text", "");
+                                String piece;
+                                if (delta != null) {
+                                    piece = delta.isNull("content") ? "" : delta.optString("content", "");
+                                } else {
+                                    piece = o.isNull("text") ? "" : o.optString("text", "");
+                                }
                                 if (piece != null && piece.length() > 0) {
                                     acc.append(piece);
                                     sendChunk(cbId, piece);

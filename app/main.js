@@ -415,7 +415,8 @@ function chat(messages) {
           try {
             const parsed = JSON.parse(data)
             const msg = parsed.choices && parsed.choices[0] && parsed.choices[0].message
-            resolve({ ok: true, content: msg ? msg.content : '', raw: parsed })
+            const text = msg && typeof msg.content === 'string' ? msg.content : ''
+            resolve({ ok: true, content: text, raw: parsed })
           } catch (e) {
             reject(new Error(`bad response: ${data.slice(0, 200)}`))
           }

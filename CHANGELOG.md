@@ -1,5 +1,20 @@
 # Changelog
 
+## v1.3.0 - 2026-11-26
+
+正式版。四平台统一到 1.3.0，修掉回复开头的 `null`。
+
+### 修复
+- **流式回复开头多出一个 `null`**：llama.cpp 的 SSE 分片里 `choices[0].delta.content` 首片常是 JSON `null`，Android 的 `optString` 会把它转成字符串 `"null"` 再拼进正文。改成先判 `isNull()`，空片直接丢弃
+- 桌面端同样加了一层类型守卫，`message.content` 非字符串时按空处理
+
+### 打包
+- Android：`TermuxAIHarness-1.3.0-android.apk`（versionCode 6）
+- Linux：`TermuxAIHarness-1.3.0-linux-x86_64.AppImage`
+- Windows：`TermuxAIHarness-1.3.0-win-x64.zip`（免安装，内含 exe）
+- macOS：`TermuxAIHarness-1.3.0-mac-x64.zip`、`TermuxAIHarness-1.3.0-mac-arm64.zip`（未签名，首次打开需右键 → 打开）
+- 校验和：`SHA256SUMS-1.3.0.txt`
+
 ## v1.0.2.7 - 2026-11-26
 
 预发布。修「已经显示已连上，但发消息报『连不上』」。
