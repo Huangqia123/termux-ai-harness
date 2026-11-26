@@ -158,11 +158,14 @@ h1{font-size:clamp(2.25rem,4.3vw,3.5rem);line-height:1.16;font-weight:900;letter
 .fake-input{flex:1;font-size:11px;color:#545C74;background:#121722;border:1px solid #1E2537;border-radius:8px;padding:7px 9px;white-space:nowrap;overflow:hidden}
 .send{width:26px;height:26px;border-radius:8px;background:linear-gradient(140deg,#8B5CF6,#6036CB);display:grid;place-items:center;color:#fff;font-size:13px;flex-shrink:0}
 
-.stats{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin-top:36px}
-.stat{padding:26px 20px;border-right:1px solid var(--line);text-align:center}
+.stats{display:grid;grid-template-columns:repeat(6,1fr);border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin-top:36px}
+.stat{padding:26px 16px;border-right:1px solid var(--line);text-align:center}
 .stat:last-child{border-right:0}
 .stat .n{font:700 26px/1 var(--mono);letter-spacing:-.02em;background:linear-gradient(140deg,#fff,#8E9BBF);-webkit-background-clip:text;background-clip:text;color:transparent}
-.stat .l{font-size:12px;color:var(--dim-2);margin-top:9px;letter-spacing:.02em}
+.stat .n.hot{background:linear-gradient(140deg,#22D3EE,#A78BFA);-webkit-background-clip:text;background-clip:text;color:transparent}
+.stat .l{font-size:11.5px;color:var(--dim-2);margin-top:9px;letter-spacing:.02em}
+.stats-meta{font:400 11px/1.6 var(--mono);color:var(--dim-2);text-align:center;padding:13px 0 0;opacity:.8}
+.stats-meta a{color:var(--cyan);text-decoration:none}
 
 section{padding:86px 0;position:relative}
 .sec-head{max-width:660px;margin-bottom:46px}
@@ -286,13 +289,15 @@ footer{padding:60px 0 44px;border-top:1px solid var(--line);margin-top:20px}
   .feat-grid{grid-template-columns:repeat(2,1fr)}
   .start-grid{grid-template-columns:1fr;gap:26px}
   .dl-grid{grid-template-columns:repeat(2,1fr)}
-  .stats{grid-template-columns:repeat(2,1fr)}
-  .stat:nth-child(2){border-right:0}
-  .stat:nth-child(1),.stat:nth-child(2){border-bottom:1px solid var(--line)}
+  .stats{grid-template-columns:repeat(3,1fr)}
+  .stat{border-right:0;border-bottom:1px solid var(--line)}
+  .stat:nth-child(5),.stat:nth-child(6){border-bottom:0}
   .nav-links{display:none}
 }
 @media(max-width:640px){
   .wrap{padding:0 18px}
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .stat:nth-child(5){border-bottom:1px solid var(--line)}
   section{padding:62px 0}
   .hero{padding:48px 0 12px}
   .feat-grid{grid-template-columns:1fr}
@@ -393,10 +398,16 @@ footer{padding:60px 0 44px;border-top:1px solid var(--line);margin-top:20px}
     </div>
 
     <div class="stats">
-      <div class="stat"><div class="n">0</div><div class="l">条云端请求</div></div>
+      <div class="stat"><div class="n hot" id="lsStars">—</div><div class="l">GitHub Stars</div></div>
+      <div class="stat"><div class="n hot" id="lsDl">—</div><div class="l">总下载 Downloads</div></div>
       <div class="stat"><div class="n">4</div><div class="l">个平台同步</div></div>
       <div class="stat"><div class="n">6</div><div class="l">个预调模型</div></div>
+      <div class="stat"><div class="n">0</div><div class="l">条云端请求</div></div>
       <div class="stat"><div class="n">1</div><div class="l">条命令装完</div></div>
+    </div>
+    <div class="stats-meta">
+      <span id="lsTime">数据来自 GitHub 公开 API · 刷新网页即更新</span>
+      · <a href="https://github.com/Huangqia123/termux-ai-harness" target="_blank" rel="noopener">查看仓库</a>
     </div>
   </div>
 </section>
@@ -913,6 +924,103 @@ termuxai-harness  <span class="c-com"># 说人话 → 命令 → 你确认</span
       b.style.maxHeight = b.scrollHeight + 'px';
     });
   });
+
+  /* ---------- GitHub 实时数据：星级 / 总下载 ---------- */
+  (function(){
+    var OWNER = 'Huangqia123', REPO = 'termux-ai-harness';
+    var KEY = 'tah_stats_v2', TTL = 90000;
+    var elStars = document.getElementById('lsStars');
+    var elDl = document.getElementById('lsDl');
+    var elTime = document.getElementById('lsTime');
+    if (!elStars || !elDl || !elTime) return;
+
+    function kfmt(n){
+      if (n == null) return '—';
+      if (n < 1000) return String(n);
+      var v = n / 1000;
+      return (v >= 100 ? Math.round(v) : Math.round(v * 10) / 10) + 'k';
+    }
+    function paint(o, ts){
+      if (o) {
+        if (o.stars != null) elStars.textContent = kfmt(o.stars);
+        if (o.dl != null) elDl.textContent = kfmt(o.dl);
+      }
+      var tail = ' · 刷新网页即更新';
+      if (ts) {
+        var d = new Date(ts);
+        tail = ' · 更新于 ' + ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
+      }
+      elTime.textContent = '数据来自 GitHub 公开 API' + tail;
+    }
+    function read(){
+      try { var s = localStorage.getItem(KEY); return s ? JSON.parse(s) : null; } catch(e) { return null; }
+    }
+    function write(o){
+      try { localStorage.setItem(KEY, JSON.stringify(o)); } catch(e) {}
+    }
+
+    var cached = read();
+    if (cached && Date.now() - cached.t < TTL) { paint(cached, cached.t); return; }
+
+    var apiBase = 'https://api.github.com/repos/' + OWNER + '/' + REPO;
+    var altBase = 'https://ungh.cc/repos/' + OWNER + '/' + REPO;
+
+    function jget(url){
+      return fetch(url, {headers:{'Accept':'application/json'}}).then(function(r){
+        if (!r.ok) throw new Error('http ' + r.status);
+        return r.json();
+      });
+    }
+
+    function getStars(){
+      return jget(apiBase)
+        .then(function(d){ return d.stargazers_count; })
+        .catch(function(){
+          return jget(altBase).then(function(d){
+            var r = d.repo || d;
+            return r.stars != null ? r.stars : r.stargazers_count;
+          });
+        });
+    }
+
+    function getDownloads(){
+      return jget(apiBase + '/releases?per_page=100')
+        .then(function(list){
+          var n = 0;
+          (list || []).forEach(function(r){
+            (r.assets || []).forEach(function(a){ n += (a.download_count || 0); });
+          });
+          return n;
+        })
+        .catch(function(){
+          return jget(altBase + '/releases')
+            .then(function(d){
+              var n = 0;
+              (d.releases || []).forEach(function(r){
+                (r.assets || []).forEach(function(a){ n += (a.downloadCount || a.download_count || 0); });
+              });
+              return n;
+            })
+            .catch(function(){
+              return jget(altBase + '/releases/latest').then(function(d){
+                var r = d.release || d, n = 0;
+                (r.assets || []).forEach(function(a){ n += (a.downloadCount || a.download_count || 0); });
+                return n;
+              });
+            });
+        });
+    }
+
+    Promise.all([
+      getStars().catch(function(){ return null; }),
+      getDownloads().catch(function(){ return null; })
+    ]).then(function(res){
+      var o = {stars: res[0], dl: res[1], t: Date.now()};
+      if (o.stars == null && o.dl == null) { paint(null, 0); return; }
+      write(o);
+      paint(o, o.t);
+    }).catch(function(){ paint(null, 0); });
+  })();
 })();
 </script>
 
