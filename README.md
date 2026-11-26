@@ -1,6 +1,7 @@
 # Termux AI Harness
 
 **官网 / Landing page:** https://huangqia123.github.io/termux-ai-harness/
+**备用站 / Backup site:** https://huangqia123.github.io/termux-ai-harness/backup/ — 主站打不开、样式错乱或构建失败时用这个，内容独立、无外部依赖（除字体），可直接访问。
 
 > **English:** Turn an Android device into a fully offline AI terminal. A local llama.cpp server does the inference; `termuxai` chats, `termuxai-harness` turns plain language into shell commands you approve before they run. Everything stays on `127.0.0.1` — no internet, no uploads, no cloud API.
 
