@@ -209,6 +209,49 @@ public class MainActivity extends Activity {
             return configJson().toString();
         }
 
+        /**
+         * Two-field save: host box + port box. The /v1 path is fixed here, so it
+         * can never be dropped by an input box or a parser.
+         */
+        @JavascriptInterface
+        public String setHostPort(String hostInput, String portInput) {
+            String h = hostInput == null ? "" : hostInput.trim();
+            if (h.startsWith("http://")) h = h.substring(7);
+            else if (h.startsWith("https://")) h = h.substring(8);
+            int slash = h.indexOf('/');
+            if (slash >= 0) h = h.substring(0, slash);
+
+            String carryPort = "";
+            int colon = h.indexOf(':');
+            if (colon > 0) {
+                carryPort = h.substring(colon + 1).trim();
+                h = h.substring(0, colon).trim();
+            }
+
+            String portText = portInput == null ? "" : portInput.trim();
+            if (portText.isEmpty()) portText = carryPort;
+            int p = DEFAULT_PORT;
+            try {
+                if (!portText.isEmpty()) p = Integer.parseInt(portText);
+            } catch (Exception e) {
+                p = DEFAULT_PORT;
+            }
+            if (h.isEmpty()) h = DEFAULT_HOST;
+            if (p < 1 || p > 65535) p = DEFAULT_PORT;
+
+            cfgHost = h;
+            cfgPort = p;
+            cfgPath = DEFAULT_PATH;
+            prefs.edit()
+                    .putString(KEY_HOST, h)
+                    .putInt(KEY_PORT, p)
+                    .putString(KEY_PATH, DEFAULT_PATH)
+                    .apply();
+
+            probePort();
+            return configJson().toString();
+        }
+
         @JavascriptInterface
         public String setEndpoint(String input) {
             String s = input == null ? "" : input.trim();
@@ -237,7 +280,7 @@ public class MainActivity extends Activity {
             if (h.isEmpty()) h = DEFAULT_HOST;
             if (p < 1 || p > 65535) p = DEFAULT_PORT;
 
-            String path = normalizePath(rawPath);
+            String path = DEFAULT_PATH;
             cfgHost = h;
             cfgPort = p;
             cfgPath = path;

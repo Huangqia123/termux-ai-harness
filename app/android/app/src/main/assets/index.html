@@ -54,8 +54,13 @@
   .sheet h3{font-size:15px;margin-bottom:6px}
   .sheet p{color:var(--muted);font-size:12.5px;line-height:1.7;margin-bottom:12px}
   .field{display:flex;gap:9px;margin-bottom:10px}
-  .field input{flex:1;background:var(--surface);border:1px solid var(--line);border-radius:9px;color:var(--text);
-               padding:11px 12px;font:inherit;font-family:var(--mono);font-size:13px;outline:none}
+  .field input{background:var(--surface);border:1px solid var(--line);border-radius:9px;color:var(--text);
+               padding:11px 12px;font:inherit;font-family:var(--mono);font-size:13px;outline:none;min-width:0}
+  .field input.grow{flex:1}
+  .field input.port{width:74px;flex:none;text-align:center}
+  .field .sep,.field .suffix{color:var(--muted);font-family:var(--mono);font-size:13px;align-self:center}
+  .preview{font-family:var(--mono);font-size:12px;color:var(--accent);background:rgba(0,229,160,.07);
+           border:1px solid rgba(0,229,160,.22);border-radius:8px;padding:9px 10px;margin-top:2px;word-break:break-all}
   .field input:focus{border-color:rgba(0,229,160,.45)}
   .sheet .btns button{flex:1}
   .tip{font-size:12px;color:#6f7a8e;line-height:1.7;margin-top:10px}
@@ -98,13 +103,16 @@
 <div class="sheet-mask hidden" id="mask">
   <div class="sheet">
     <h3>接口地址</h3>
-    <p>默认 <code>127.0.0.1:8080/v1</code>；端口被占用会自动往 8081–8091 找。跨 App 访问要填内网 IPv4，比如 <code>192.168.1.40:8080/v1</code>。只写 <code>192.168.1.40:8080</code> 也行，保存时会自动补上 <code>/v1</code>。</p>
+    <p>主机和端口分开填，<code>/v1</code> 是固定后缀，不会被吞掉。默认 <code>127.0.0.1:8080</code>；端口被占用会自动往 8081–8091 找。跨 App 访问填内网 IPv4，比如 <code>192.168.1.40</code> + <code>8080</code>。</p>
     <div class="field">
-      <input id="addr" type="text" inputmode="text" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="192.168.1.40:8080/v1">
+      <input id="addr-host" class="grow" type="text" inputmode="decimal" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="192.168.1.40">
+      <span class="sep">:</span>
+      <input id="addr-port" class="port" type="text" inputmode="numeric" autocapitalize="off" spellcheck="false" placeholder="8080">
+      <span class="suffix">/v1</span>
       <button class="primary" id="b-save">保存</button>
     </div>
+    <div class="preview" id="pv"></div>
     <div class="btns">
-      <button class="ghost" id="b-v1">补上 /v1</button>
       <button class="ghost" id="b-default">恢复默认</button>
       <button class="ghost" id="b-close">关闭</button>
     </div>
@@ -122,13 +130,17 @@ const dot = document.getElementById('dot')
 const stext = document.getElementById('stext')
 const badge = document.getElementById('badge')
 
+function shortUrl() {
+  const u = st.url || ('http://' + st.host + ':' + st.port + '/v1')
+  return u.replace(/^https?:\/\//, '')
+}
+
 function paint() {
-  const shown = (st.url || ('http://' + st.host + ':' + st.port + (st.path || '')))
-  stext.textContent = st.ok ? ('已连上 · ' + st.host + ':' + st.activePort) : (st.host + ':' + st.port + (st.path || ''))
+  stext.textContent = st.ok ? ('已连上 · ' + st.host + ':' + st.activePort) : shortUrl()
   dot.className = 'dot ' + (st.ok ? 'ok' : 'err')
-  badge.textContent = st.host + ':' + st.port + (st.path || '')
+  badge.textContent = shortUrl()
   badge.className = 'badge ' + (st.ok ? 'ok' : 'warn')
-  document.getElementById('cur').textContent = shown
+  document.getElementById('cur').textContent = st.url || ('http://' + st.host + ':' + st.port + '/v1')
 }
 
 function apply(raw) {
@@ -201,10 +213,18 @@ function send(text) {
 
 const mask = document.getElementById('mask')
 
+function updatePreview() {
+  const h = document.getElementById('addr-host').value.trim().replace(/^https?:\/\//, '').split(':')[0] || '127.0.0.1'
+  const p = document.getElementById('addr-port').value.trim() || '8080'
+  document.getElementById('pv').textContent = 'http://' + h + ':' + p + '/v1'
+}
+
 function openSheet() {
-  document.getElementById('addr').value = st.host + ':' + st.port
+  document.getElementById('addr-host').value = st.host
+  document.getElementById('addr-port').value = String(st.port)
   document.getElementById('tip').textContent =
     st.termux ? 'Termux 已安装' : '没检测到 Termux，引擎可能不在本机'
+  updatePreview()
   mask.classList.remove('hidden')
 }
 
@@ -216,23 +236,20 @@ document.getElementById('b-close').onclick = closeSheet
 mask.onclick = function (e) { if (e.target === mask) closeSheet() }
 
 document.getElementById('b-save').onclick = function () {
-  const v = document.getElementById('addr').value.trim()
-  if (!v) return
-  apply(B.setEndpoint(v))
+  const h = document.getElementById('addr-host').value.trim()
+  const p = document.getElementById('addr-port').value.trim() || '8080'
+  if (!h) return
+  apply(B.setHostPort(h, p))
   closeSheet()
   if (!st.ok) loop()
 }
 
-document.getElementById('b-v1').onclick = function () {
-  const el = document.getElementById('addr')
-  let v = el.value.trim()
-  if (!v) v = st.host + ':' + st.port
-  if (!/\/v1($|\/)/.test(v)) v = v.replace(/\/+$/, '') + '/v1'
-  el.value = v
-}
+;['addr-host', 'addr-port'].forEach(function (id) {
+  document.getElementById(id).addEventListener('input', updatePreview)
+})
 
 document.getElementById('b-default').onclick = function () {
-  apply(B.setEndpoint('127.0.0.1:8080/v1'))
+  apply(B.setHostPort('127.0.0.1', '8080'))
   closeSheet()
   if (!st.ok) loop()
 }
