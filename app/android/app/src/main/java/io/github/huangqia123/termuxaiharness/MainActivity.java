@@ -13,8 +13,10 @@ import android.widget.Toast;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -372,6 +374,77 @@ public class MainActivity extends Activity {
             }).start();
         }
 
+        /**
+         * Streaming chat. Reads the SSE stream token by token and pushes each
+         * delta to the page, so a slow phone CPU never trips a read timeout:
+         * something always arrives well inside the window.
+         */
+        @JavascriptInterface
+        public void chatStream(final String messagesJson, final String cbId) {
+            if (activePort <= 0) probePort();
+            final String host = activeHost;
+            final int port = activePort;
+            if (port <= 0 || host == null) {
+                sendResult(cbId, "服务没起来：先在 Termux 启动 llama-server，或点右上角改地址", null);
+                return;
+            }
+            new Thread(new Runnable() {
+                public void run() {
+                    HttpURLConnection c = null;
+                    BufferedReader br = null;
+                    StringBuilder acc = new StringBuilder();
+                    try {
+                        c = (HttpURLConnection) new URL(baseUrl(host, port, cfgPath) + "/chat/completions").openConnection();
+                        c.setConnectTimeout(10000);
+                        c.setReadTimeout(180000);
+                        c.setRequestMethod("POST");
+                        c.setDoOutput(true);
+                        c.setRequestProperty("Content-Type", "application/json; charset=utf-8");
+                        c.setRequestProperty("Accept", "text/event-stream");
+                        OutputStream os = c.getOutputStream();
+                        os.write(messagesJson.getBytes("UTF-8"));
+                        os.flush();
+                        os.close();
+                        int code = c.getResponseCode();
+                        if (code < 200 || code >= 300) {
+                            String err = readStream(c.getErrorStream());
+                            sendResult(cbId, "HTTP " + code
+                                    + (err == null || err.length() == 0 ? "" : "：" + cut(err, 160)), null);
+                            return;
+                        }
+                        br = new BufferedReader(new InputStreamReader(c.getInputStream(), "UTF-8"));
+                        String line;
+                        while ((line = br.readLine()) != null) {
+                            if (!line.startsWith("data:")) continue;
+                            String d = line.substring(5).trim();
+                            if ("[DONE]".equals(d)) break;
+                            try {
+                                JSONObject j = new JSONObject(d);
+                                JSONArray ch = j.optJSONArray("choices");
+                                if (ch == null || ch.length() == 0) continue;
+                                JSONObject o = ch.getJSONObject(0);
+                                JSONObject delta = o.optJSONObject("delta");
+                                String piece = delta != null ? delta.optString("content", "") : o.optString("text", "");
+                                if (piece != null && piece.length() > 0) {
+                                    acc.append(piece);
+                                    sendChunk(cbId, piece);
+                                }
+                            } catch (Exception ignored) {}
+                        }
+                        sendResult(cbId, null, acc.toString());
+                    } catch (Exception e) {
+                        String msg = String.valueOf(e.getMessage());
+                        sendResult(cbId, "请求中断：" + e.getClass().getSimpleName()
+                                + (msg.equals("null") ? "" : " " + msg)
+                                + " · 看 Termux 那边还在不在跑", acc.length() > 0 ? acc.toString() : null);
+                    } finally {
+                        try { if (br != null) br.close(); } catch (Exception ignored) {}
+                        if (c != null) c.disconnect();
+                    }
+                }
+            }).start();
+        }
+
         @JavascriptInterface
         public void openUrl(final String url) {
             runOnUiThread(new Runnable() {
@@ -394,6 +467,35 @@ public class MainActivity extends Activity {
                 if (web != null) web.evaluateJavascript(js, null);
             }
         });
+    }
+
+    private void sendChunk(String cbId, String piece) {
+        final String js = "window.__onChunk("
+                + JSONObject.quote(cbId) + ","
+                + JSONObject.quote(piece) + ")";
+        runOnUiThread(new Runnable() {
+            public void run() {
+                if (web != null) web.evaluateJavascript(js, null);
+            }
+        });
+    }
+
+    private static String readStream(InputStream is) {
+        if (is == null) return null;
+        try {
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            byte[] buf = new byte[4096];
+            int n;
+            while ((n = is.read(buf)) != -1) out.write(buf, 0, n);
+            is.close();
+            return out.toString("UTF-8");
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private static String cut(String s, int max) {
+        return s.length() <= max ? s : s.substring(0, max) + "…";
     }
 
     private void toast(String text) {

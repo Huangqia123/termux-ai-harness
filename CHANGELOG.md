@@ -1,5 +1,19 @@
 # Changelog
 
+## v1.0.2.7 - 2026-11-26
+
+预发布。修「已经显示已连上，但发消息报『连不上』」。
+
+### 根因
+Termux 日志里三处 `stop: cancel task` 都发生在请求开始后约 12 秒，`n_tokens` 只到 32/38。
+这不是网络断了，是 APK 的 `readTimeout` 只有 12 秒：3B 模型在手机上首个 token 出得慢，客户端先超时断开，服务端记成 cancel。`/v1/models` 探测很快，所以状态灯一直是绿的。
+
+### 修复
+- 聊天改为 **SSE 流式**：新增 `chatStream(messagesJson, cbId)`，逐行读 `data:` 增量，每个 token 立刻推给界面（`window.__onChunk`）
+- `readTimeout` 提到 180 秒、`connectTimeout` 10 秒；流式下每 token 都有数据，实际不会触发超时
+- 出错时不再一律说「连不上」，而是显示 `请求中断：<异常名> <原因>` 或 `HTTP <code>：<服务端原文>`
+- 气泡边流边涨，不用干等整段返回
+
 ## v1.0.2.6 - 2026-11-26
 
 预发布。修「点保存时斜杠 v1 自动消失」。

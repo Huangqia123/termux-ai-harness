@@ -184,11 +184,23 @@ function add(kind, text) {
   return d
 }
 
+let streamEl = null
+
+window.__onChunk = function (id, piece) {
+  if (!streamEl) return
+  if (streamEl.textContent === '…') streamEl.textContent = ''
+  streamEl.textContent += piece
+  const box = document.getElementById('msgs')
+  box.scrollTop = box.scrollHeight
+}
+
 window.__onChat = function (id, error, content) {
-  const el = document.getElementById('pending')
+  const el = streamEl || document.getElementById('pending')
   if (!el) return
   el.removeAttribute('id')
-  el.textContent = error ? error : content
+  if (error) el.textContent = error
+  else if (content) el.textContent = content
+  streamEl = null
 }
 
 function send(text) {
@@ -199,6 +211,7 @@ function send(text) {
   document.getElementById('input').value = ''
   const pending = add('ai', '…')
   pending.id = 'pending'
+  streamEl = pending
   history.push({ role: 'user', content: v })
 
   const body = JSON.stringify({
@@ -206,9 +219,9 @@ function send(text) {
       .concat(history.slice(-12)),
     temperature: 0.7,
     max_tokens: 512,
-    stream: false
+    stream: true
   })
-  B.chat(body, 'c' + Date.now())
+  B.chatStream(body, 'c' + Date.now())
 }
 
 const mask = document.getElementById('mask')
