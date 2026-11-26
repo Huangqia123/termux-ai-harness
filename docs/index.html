@@ -393,36 +393,6 @@ td code, .mono {
 }
 .copy-btn:hover { color: var(--accent); border-color: rgba(0,229,160,.3); }
 
-/* ---------- chain ---------- */
-.chain {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 14px;
-  counter-reset: step;
-}
-
-.chain-item {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 11px;
-  padding: 20px 18px;
-  position: relative;
-}
-
-.chain-item::before {
-  counter-increment: step;
-  content: "0" counter(step);
-  position: absolute;
-  top: 14px; right: 16px;
-  font-family: var(--mono);
-  font-size: 11px;
-  color: #3a4355;
-}
-
-.chain-item h4 { font-size: 15px; margin-bottom: 6px; color: var(--accent); font-weight: 600; padding-right: 26px; }
-.chain-item p { font-size: 13px; color: var(--muted); }
-.chain-item p code { color: var(--accent); background: rgba(0,229,160,.07); padding: 1px 5px; border-radius: 4px; font-size: 12px; }
-
 /* ---------- warning ---------- */
 .warning {
   border: 1px solid rgba(255, 184, 107, 0.28);
@@ -489,7 +459,6 @@ footer { border-top: 1px solid var(--line); padding: 40px 0 60px; margin-top: 40
       <a href="#features" data-i18n="nav.features">特性</a>
       <a href="#platforms" data-i18n="nav.platforms">平台</a>
       <a href="#install" data-i18n="nav.install">安装</a>
-      <a href="#chain" data-i18n="nav.deploy">上线链路</a>
       <a href="https://github.com/Huangqia123/termux-ai-harness" target="_blank" rel="noopener">GitHub</a>
     </div>
     <div class="lang-switch">
@@ -677,34 +646,6 @@ termuxai-harness</pre>
   </div>
 </section>
 
-<section id="chain">
-  <div class="wrap">
-    <div class="section-head reveal">
-      <div class="section-label">Deploy</div>
-      <h2 data-i18n="chain.h2">一个网页，不是写出来就能打开的</h2>
-      <p data-i18n="chain.p">页面在这台机器上只是一堆文件。要让别人点开链接看到它，得走完这条链路——这个站点本身也是这么上线的。</p>
-    </div>
-
-    <div class="chain reveal">
-      <div class="chain-item">
-        <h4 data-i18n="chain.c1.t">本地生成页面</h4>
-        <p data-i18n="chain.c1.d">HTML / CSS / JS 落在你的磁盘上，浏览器直接打开就能看见，但只有你能看见。</p>
-      </div>
-      <div class="chain-item">
-        <h4 data-i18n="chain.c2.t">推到 GitHub</h4>
-        <p data-i18n="chain.c2.d">代码进仓库，别人能查看、能改、能提 PR。这一步解决的是「可获取」。</p>
-      </div>
-      <div class="chain-item">
-        <h4 data-i18n="chain.c3.t">托管服务</h4>
-        <p data-i18n="chain.c3.d">GitHub Pages 或 Cloudflare Pages 把仓库变成可访问的站点，分配一个 <code>username.github.io</code> 这样的域名。</p>
-      </div>
-      <div class="chain-item">
-        <h4 data-i18n="chain.c4.t">绑定域名</h4>
-        <p data-i18n="chain.c4.d">想让入口好记，就在 DNS 里加 CNAME 指向托管地址，再配一张 HTTPS 证书。</p>
-      </div>
-    </div>
-  </div>
-</section>
 
 <footer>
   <div class="wrap foot-inner">
@@ -728,7 +669,6 @@ const I18N = {
     "nav.features": "特性",
     "nav.platforms": "平台",
     "nav.install": "安装",
-    "nav.deploy": "上线链路",
 
     "hero.badge": "v1.0.0 · 完全本地 · 无 API Key",
     "hero.title": "把任何一台机器<br>变成<span class=\"accent\">离线 AI 终端</span>。",
@@ -762,17 +702,6 @@ const I18N = {
     "ins.tab1": "Termux / Linux / macOS",
     "ins.copy": "copy",
 
-    "chain.h2": "一个网页，不是写出来就能打开的",
-    "chain.p": "页面在这台机器上只是一堆文件。要让别人点开链接看到它，得走完这条链路——这个站点本身也是这么上线的。",
-    "chain.c1.t": "本地生成页面",
-    "chain.c1.d": "HTML / CSS / JS 落在你的磁盘上，浏览器直接打开就能看见，但只有你能看见。",
-    "chain.c2.t": "推到 GitHub",
-    "chain.c2.d": "代码进仓库，别人能查看、能改、能提 PR。这一步解决的是「可获取」。",
-    "chain.c3.t": "托管服务",
-    "chain.c3.d": "GitHub Pages 或 Cloudflare Pages 把仓库变成可访问的站点，分配一个 <code>username.github.io</code> 这样的域名。",
-    "chain.c4.t": "绑定域名",
-    "chain.c4.d": "想让入口好记，就在 DNS 里加 CNAME 指向托管地址，再配一张 HTTPS 证书。",
-
     "foot.repo": "仓库",
     "foot.releases": "发布"
   },
@@ -781,7 +710,6 @@ const I18N = {
     "nav.features": "Features",
     "nav.platforms": "Platforms",
     "nav.install": "Install",
-    "nav.deploy": "Deploy",
 
     "hero.badge": "v1.0.0 · Fully local · No API key",
     "hero.title": "Turn any machine into<br>an <span class=\"accent\">offline AI terminal</span>.",
@@ -814,17 +742,6 @@ const I18N = {
     "ins.p": "Start the model server, install the tools, then type the command name. Model files never enter git — hundreds of megabytes to several gigabytes of binary do not belong in version control.",
     "ins.tab1": "Termux / Linux / macOS",
     "ins.copy": "copy",
-
-    "chain.h2": "A web page is not a website yet",
-    "chain.p": "On your disk, the page is just files. Before anyone can open a link and see it, the whole chain has to be closed — this site went live exactly this way.",
-    "chain.c1.t": "Generate locally",
-    "chain.c1.d": "HTML / CSS / JS sit on your disk. The browser can open them, but only you can see them.",
-    "chain.c2.t": "Push to GitHub",
-    "chain.c2.d": "Code enters a repository: others can read it, fork it, send pull requests. This step makes it available.",
-    "chain.c3.t": "Host it",
-    "chain.c3.d": "GitHub Pages or Cloudflare Pages turns the repo into a reachable site and hands you a domain like <code>username.github.io</code>.",
-    "chain.c4.t": "Bind a domain",
-    "chain.c4.d": "For a memorable entry point, add a CNAME record pointing at the host and provision an HTTPS certificate.",
 
     "foot.repo": "Repository",
     "foot.releases": "Releases"
