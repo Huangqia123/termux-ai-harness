@@ -76,7 +76,9 @@
   </div>
   <div id="messages" class="messages"></div>
   <form id="composer" class="composer">
-    <textarea id="input" rows="1" placeholder="问点什么，或让它干点什么…"></textarea>
+    <button type="button" class="btn tiny ghost" id="btn-img" title="发一张图片给模型看">图片</button>
+    <input type="file" id="img-file" accept="image/*" hidden />
+    <textarea id="input" rows="1" placeholder="问点什么，或让它干点什么…（可直接粘贴图片）"></textarea>
     <label class="toggle" id="btn-web" title="先用 DuckDuckGo / 维基百科 搜一遍，再把结果喂给模型">
       <input type="checkbox" id="web-on" />
       <span>联网</span>

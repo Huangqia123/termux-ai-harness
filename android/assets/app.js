@@ -278,6 +278,49 @@ function aiBubble() {
   return current
 }
 
+let pendingImage = null
+
+function fileToDataUrl(file, maxSide) {
+  maxSide = maxSide || 1024
+  return new Promise(function (resolve, reject) {
+    const img = new Image()
+    const url = URL.createObjectURL(file)
+    img.onload = function () {
+      const scale = Math.min(1, maxSide / Math.max(img.width, img.height))
+      const w = Math.round(img.width * scale)
+      const h = Math.round(img.height * scale)
+      const c = document.createElement('canvas')
+      c.width = w
+      c.height = h
+      c.getContext('2d').drawImage(img, 0, 0, w, h)
+      URL.revokeObjectURL(url)
+      resolve(c.toDataURL('image/jpeg', 0.85))
+    }
+    img.onerror = function () {
+      URL.revokeObjectURL(url)
+      reject(new Error('图片读取失败'))
+    }
+    img.src = url
+  })
+}
+
+function setPendingImage(dataUrl) {
+  pendingImage = dataUrl
+  const btn = $('btn-img')
+  if (btn) btn.textContent = '图片 ✓'
+  addSys('已选好一张图片，发送时会一起交给模型')
+}
+
+async function takeImageFile(file) {
+  if (!file || !/^image\//.test(file.type || '')) return
+  try {
+    const dataUrl = await fileToDataUrl(file)
+    setPendingImage(dataUrl)
+  } catch (e) {
+    addSys('❌ 图片读取失败：' + e.message)
+  }
+}
+
 function extractUrl(text) {
   const m = String(text || '').match(/(?:https?:\/\/)?(?:[a-z0-9-]+\.)+[a-z]{2,}(?::\d+)?(?:\/[\w\-./?%&=#+~]*)?/i)
   if (!m) return null
@@ -308,7 +351,7 @@ function addShot(src, url) {
   box.className = 'msg shot'
   const img = document.createElement('img')
   img.src = /^data:/.test(String(src)) ? src : fileUrl(src)
-  img.alt = '网页截图'
+  img.alt = url ? '网页截图' : '发送的图片'
   img.title = '点击打开原图'
   img.onclick = () => { if (url) window.api.openExternal(url) }
   box.appendChild(img)
@@ -335,11 +378,20 @@ async function webContext(query) {
 
 async function send(text) {
   const value = text.trim()
-  if (!value) return
-  addMsg('user', value)
+  if (!value && !pendingImage) return
+  const img = pendingImage
+  pendingImage = null
+  const imgBtn = $('btn-img')
+  if (imgBtn) imgBtn.textContent = '图片'
+
+  addMsg('user', value || '（发送了一张图片）')
+  if (img) addShot(img, '')
   $('input').value = ''
   const cur = aiBubble()
-  history.push({ role: 'user', content: value })
+  const userContent = img
+    ? [{ type: 'text', text: value || '看看这张图' }, { type: 'image_url', image_url: { url: img } }]
+    : value
+  history.push({ role: 'user', content: userContent })
 
   try {
     let system = SYSTEM_PROMPT
@@ -444,6 +496,35 @@ $('btn-add-model').onclick = async () => {
   renderModels()
   updateStart()
 }
+
+
+/* ------------------------------------------------------------ image input */
+
+if ($('btn-img') && $('img-file')) {
+  $('btn-img').onclick = () => $('img-file').click()
+  $('img-file').onchange = async (e) => {
+    const f = e.target.files && e.target.files[0]
+    e.target.value = ''
+    await takeImageFile(f)
+  }
+}
+
+window.addEventListener('paste', async (e) => {
+  const items = (e.clipboardData && e.clipboardData.items) || []
+  for (const it of items) {
+    if (it.type && it.type.indexOf('image/') === 0) {
+      await takeImageFile(it.getAsFile())
+      break
+    }
+  }
+})
+
+document.addEventListener('dragover', (e) => e.preventDefault())
+document.addEventListener('drop', async (e) => {
+  e.preventDefault()
+  const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]
+  if (f) await takeImageFile(f)
+})
 
 $('btn-open-site').onclick = () => window.api.openExternal('https://huangqia123.github.io/termux-ai-harness/')
 

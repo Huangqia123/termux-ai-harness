@@ -40,6 +40,23 @@ const CATALOG = [
     ctx: 512
   },
   {
+    id: 'vision-cn',
+    tier: '识图',
+    name: 'Qwen2.5-VL-3B-Instruct',
+    file: 'Qwen2.5-VL-3B-Instruct-Q4_K_M.gguf',
+    size: 1929 * 1024 * 1024,
+    sizeLabel: '1.9GB',
+    ram: '3~4GB',
+    note: '能看图：把截图丢给它，它描述画面里的内容',
+    url: 'https://hf-mirror.com/ggml-org/Qwen2.5-VL-3B-Instruct-GGUF/resolve/main/Qwen2.5-VL-3B-Instruct-Q4_K_M.gguf',
+    mmproj: {
+      file: 'mmproj-Qwen2.5-VL-3B-Instruct-Q8_0.gguf',
+      url: 'https://hf-mirror.com/ggml-org/Qwen2.5-VL-3B-Instruct-GGUF/resolve/main/mmproj-Qwen2.5-VL-3B-Instruct-Q8_0.gguf',
+      size: 427 * 1024 * 1024
+    },
+    ctx: 4096
+  },
+  {
     id: 'mid-en',
     tier: '中配',
     name: 'Llama-3.2-1B-Instruct',
@@ -126,6 +143,7 @@ function scanModels() {
     for (const e of entries) {
       if (!e.isFile() && !e.isSymbolicLink()) continue
       if (!e.name.toLowerCase().endsWith('.gguf')) continue
+      if (/^mmproj/i.test(e.name) || /mmproj/i.test(e.name)) continue // 多模态投影文件不是模型
       const full = path.join(dir, e.name)
       try {
         const st = fs.statSync(full)
@@ -140,6 +158,26 @@ function scanModels() {
     seen.add(m.path)
     return true
   })
+}
+
+function findMmproj(modelPath) {
+  if (!modelPath) return null
+  const dir = path.dirname(modelPath)
+  let names = []
+  try {
+    names = fs.readdirSync(dir)
+  } catch {
+    return null
+  }
+  const cands = names.filter((n) => /\.gguf$/i.test(n) && /mmproj/i.test(n))
+  if (!cands.length) return null
+  const base = path.basename(modelPath).toLowerCase()
+  const exact = cands.find((n) => {
+    const nb = n.toLowerCase()
+    return nb.startsWith('mmproj') && base.includes(nb.replace(/^mmproj-?/, '').replace(/\.gguf$/, ''))
+  })
+  const pick = exact || cands[0]
+  return path.join(dir, pick)
 }
 
 function isExecutable(p) {
@@ -182,6 +220,46 @@ function findEngine() {
 
 /* ---------------------------------------------------------------- download */
 
+function downloadTo(url, dest, onProgress) {
+  const part = dest + '.part'
+  return new Promise((resolve, reject) => {
+    try { fs.rmSync(part, { force: true }) } catch {}
+    const go = (u, redirects) => {
+      const req = https.get(u, { headers: { 'User-Agent': 'termux-ai-harness-app' } }, (res) => {
+        if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+          if (redirects > 5) return reject(new Error('too many redirects'))
+          res.resume()
+          return go(new URL(res.headers.location, u).toString(), redirects + 1)
+        }
+        if (res.statusCode !== 200) {
+          res.resume()
+          return reject(new Error('HTTP ' + res.statusCode))
+        }
+        const total = Number(res.headers['content-length'] || 0)
+        let received = 0
+        let last = 0
+        const out = fs.createWriteStream(part)
+        res.on('data', (c) => {
+          received += c.length
+          const now = Date.now()
+          if (onProgress && now - last > 300) {
+            last = now
+            onProgress(received, total)
+          }
+        })
+        res.pipe(out)
+        out.on('finish', () => out.close(() => {
+          try { fs.renameSync(part, dest) } catch (e) { return reject(e) }
+          resolve(dest)
+        }))
+        res.on('error', reject)
+      })
+      req.on('error', reject)
+    }
+    go(url, 0)
+  })
+}
+
 function downloadModel(id, win) {
   const item = CATALOG.find((c) => c.id === id)
   if (!item) return Promise.reject(new Error('unknown model id'))
@@ -191,7 +269,11 @@ function downloadModel(id, win) {
   const dest = path.join(dir, item.file)
   const part = dest + '.part'
 
+  const mmDest = item.mmproj ? path.join(dir, item.mmproj.file) : null
   if (fs.existsSync(dest)) {
+    if (mmDest && !fs.existsSync(mmDest) && !fs.existsSync(mmDest + '.part')) {
+      return downloadTo(item.mmproj.url, mmDest, null).then(() => ({ path: dest, already: true }))
+    }
     return Promise.resolve({ path: dest, already: true })
   }
 
@@ -242,6 +324,15 @@ function downloadModel(id, win) {
             }
             if (win && !win.isDestroyed()) {
               win.webContents.send('model:progress', { id, received, total, percent: 100, done: true })
+            }
+            if (mmDest && !fs.existsSync(mmDest)) {
+              const prog = win && !win.isDestroyed()
+                ? (r, t) => win.webContents.send('model:progress', { id, received: r, total: t, percent: t ? Math.min(100, (r / t) * 100) : 0, extra: true })
+                : null
+              downloadTo(item.mmproj.url, mmDest, prog)
+                .then(() => resolve({ path: dest, already: false }))
+                .catch(() => resolve({ path: dest, already: false }))
+              return
             }
             resolve({ path: dest, already: false })
           })
@@ -322,7 +413,10 @@ async function startEngine(modelPath, opts, win) {
   const threads = opts && opts.threads ? opts.threads : Math.min(4, cores)
   const ctx = opts && opts.ctx ? opts.ctx : 2048
 
+  const mmproj = findMmproj(modelPath)
   const args = ['-m', modelPath, '-c', String(ctx), '--port', String(activePort), '-t', String(threads)]
+  if (mmproj) args.push('--mmproj', mmproj, '--image-min-tokens', '512')
+  if (win && !win.isDestroyed()) win.webContents.send('engine:log', mmproj ? '多模态模式：' + path.basename(mmproj) : '纯文本模式（没找到 mmproj）')
   engineProc = spawn(bin, args, {
     stdio: ['ignore', 'pipe', 'pipe'],
     windowsHide: true,
@@ -598,7 +692,9 @@ function state() {
     platform: process.platform,
     arch: process.arch,
     cpuThreads: Math.max(2, Math.min(8, os.cpus().length)),
-    totalMemGB: Math.round((os.totalmem() / 1024 ** 3) * 10) / 10
+    totalMemGB: Math.round((os.totalmem() / 1024 ** 3) * 10) / 10,
+    vision: !!findMmproj(activeModel || (models[0] && models[0].path)),
+    mmproj: findMmproj(activeModel || (models[0] && models[0].path))
   }
 }
 
