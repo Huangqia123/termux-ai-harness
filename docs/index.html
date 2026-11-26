@@ -496,6 +496,11 @@ footer { border-top: 1px solid var(--line); padding: 40px 0 60px; margin-top: 40
   .hist-links a{color:var(--muted);font-size:11.5px;text-decoration:none;border-bottom:1px solid var(--line);padding-bottom:1px}
   .hist-links a:hover{color:var(--accent);border-color:rgba(0,229,160,.4)}
   .hist-empty{color:var(--muted);font-size:12.5px;padding:14px 15px}
+  .dl-raw{display:inline-block;margin-top:8px;font-family:var(--mono);font-size:11px;color:var(--muted);
+    text-decoration:none;border-bottom:1px solid var(--line);padding-bottom:1px}
+  .dl-raw:hover{color:var(--accent);border-color:rgba(0,229,160,.4)}
+  .dl-acc{color:var(--muted);font-size:12px;line-height:1.7;margin:14px 0 0}
+  .dl-acc a{color:var(--accent);text-decoration:none;border-bottom:1px solid rgba(0,229,160,.35)}
   @media(max-width:820px){.dl-grid{grid-template-columns:1fr}}
 /* ---------- live stats ---------- */
 .live-stats { padding: 0 0 44px; }
@@ -628,36 +633,43 @@ footer { border-top: 1px solid var(--line); padding: 40px 0 60px; margin-top: 40
       <a class="dl-tab" href="https://github.com/Huangqia123/termux-ai-harness/releases/latest" data-plat="win">Windows</a>
     </div>
     <p class="dl-tip reveal" data-i18n="dl.pick">点平台名，直接开始下载当前最新版；版本号和文件名由页面实时从 GitHub 拉取。</p>
+    <p class="dl-acc reveal"><span data-i18n="dl.acc">下载默认走国内加速节点，文件与 GitHub 原包逐字节一致；节点抽风时用每张卡下面的「GitHub 原链」。</span>
+      <span data-i18n="dl.accSum">校验文件：</span><a id="sumLink" href="https://github.com/Huangqia123/termux-ai-harness/releases/download/v1.4.0/SHA256SUMS-1.4.0.txt">SHA256SUMS</a></p>
 
     <div class="dl-grid reveal">
       <div class="dl-card">
         <div class="dl-top"><span class="dl-plat">Android</span><span class="badge ok">APK</span></div>
         <p data-i18n="dl.android">界面壳。可填内网地址（192.168.x.x:8080/v1），支持深度思考与免费联网搜索。</p>
         <a class="dl-btn" data-asset="android" href="https://github.com/Huangqia123/termux-ai-harness/releases/download/v1.4.0/TermuxAIHarness-1.4.0-android.apk">TermuxAIHarness-1.4.0-android.apk</a>
+        <a class="dl-raw" data-raw="android" href="https://github.com/Huangqia123/termux-ai-harness/releases/download/v1.4.0/TermuxAIHarness-1.4.0-android.apk">GitHub 原链 ↗</a>
       </div>
 
       <div class="dl-card">
         <div class="dl-top"><span class="dl-plat">Windows 10 / 11</span><span class="badge">x64</span></div>
         <p data-i18n="dl.win">压缩包，解开双击 exe 就行。没签名，SmartScreen 会拦一次，点「更多信息 → 仍要运行」。</p>
         <a class="dl-btn" data-asset="win" href="https://github.com/Huangqia123/termux-ai-harness/releases/download/v1.4.0/TermuxAIHarness-1.4.0-win-x64.zip">TermuxAIHarness-1.4.0-win-x64.zip</a>
+        <a class="dl-raw" data-raw="win" href="https://github.com/Huangqia123/termux-ai-harness/releases/download/v1.4.0/TermuxAIHarness-1.4.0-win-x64.zip">GitHub 原链 ↗</a>
       </div>
 
       <div class="dl-card">
         <div class="dl-top"><span class="dl-plat">macOS · Apple 芯片</span><span class="badge">arm64</span></div>
         <p data-i18n="dl.macArm">M1 / M2 / M3 / M4 选这个。未签名未公证，首次右键 → 打开。</p>
         <a class="dl-btn" data-asset="mac-arm" href="https://github.com/Huangqia123/termux-ai-harness/releases/download/v1.4.0/TermuxAIHarness-1.4.0-mac-arm64.zip">TermuxAIHarness-1.4.0-mac-arm64.zip</a>
+        <a class="dl-raw" data-raw="mac-arm" href="https://github.com/Huangqia123/termux-ai-harness/releases/download/v1.4.0/TermuxAIHarness-1.4.0-mac-arm64.zip">GitHub 原链 ↗</a>
       </div>
 
       <div class="dl-card">
         <div class="dl-top"><span class="dl-plat">macOS · Intel</span><span class="badge">x64</span></div>
         <p data-i18n="dl.macIntel">老款 Intel Mac 选这个。同样未签名，首次右键 → 打开。</p>
         <a class="dl-btn" data-asset="mac-intel" href="https://github.com/Huangqia123/termux-ai-harness/releases/download/v1.4.0/TermuxAIHarness-1.4.0-mac-x64.zip">TermuxAIHarness-1.4.0-mac-x64.zip</a>
+        <a class="dl-raw" data-raw="mac-intel" href="https://github.com/Huangqia123/termux-ai-harness/releases/download/v1.4.0/TermuxAIHarness-1.4.0-mac-x64.zip">GitHub 原链 ↗</a>
       </div>
 
       <div class="dl-card">
         <div class="dl-top"><span class="dl-plat">Linux</span><span class="badge">AppImage</span></div>
         <p data-i18n="dl.linux">单文件 AppImage，加个执行位就能跑，不挑发行版。</p>
         <a class="dl-btn" data-asset="linux" href="https://github.com/Huangqia123/termux-ai-harness/releases/download/v1.4.0/TermuxAIHarness-1.4.0-linux-x86_64.AppImage">TermuxAIHarness-1.4.0-linux-x86_64.AppImage</a>
+        <a class="dl-raw" data-raw="linux" href="https://github.com/Huangqia123/termux-ai-harness/releases/download/v1.4.0/TermuxAIHarness-1.4.0-linux-x86_64.AppImage">GitHub 原链 ↗</a>
       </div>
     </div>
 
@@ -860,6 +872,8 @@ const I18N = {
     "hero.badgeRest": " · 完全本地 · 无 API Key",
     "hero.ctaPre": "下载",
     "dl.pick": "点平台名，直接开始下载当前最新版；版本号和文件名由页面实时从 GitHub 拉取，不用等你改。",
+    "dl.acc": "下载默认走国内加速节点，文件与 GitHub 原包逐字节一致；节点抽风时用每张卡下面的「GitHub 原链」。",
+    "dl.accSum": "校验文件：",
     "dl.macArm": "M1 / M2 / M3 / M4 选这个。未签名未公证，首次右键 → 打开。",
     "dl.macIntel": "老款 Intel Mac 选这个。同样未签名，首次右键 → 打开。",
     "hist.h3": "历史版本",
@@ -924,6 +938,8 @@ const I18N = {
     "hero.badgeRest": " · Fully local · No API key",
     "hero.ctaPre": "Download",
     "dl.pick": "Tap a platform to start downloading the current build. Version and filenames are pulled live from GitHub.",
+    "dl.acc": "Downloads default to a China-accelerated mirror; the bytes are identical to the GitHub original. If the mirror misbehaves, use the raw GitHub link under each card.",
+    "dl.accSum": "Checksums: ",
     "dl.macArm": "Pick this on M1 / M2 / M3 / M4. Unsigned and unnotarized: right-click → Open the first time.",
     "dl.macIntel": "Pick this on older Intel Macs. Also unsigned: right-click → Open the first time.",
     "hist.h3": "Release history",
@@ -1175,6 +1191,11 @@ if ('IntersectionObserver' in window) {
     'win': /-win-x64\.zip$/i
   };
   var ORDER = [['android', 'APK'], ['mac-arm', 'macOS ARM'], ['mac-intel', 'macOS x64'], ['linux', 'Linux'], ['win', 'Windows']];
+  var PROXY = 'https://ghfast.top/';
+  function accel(u) {
+    if (!u) return u;
+    return u.indexOf('http') === 0 ? PROXY + u : u;
+  }
 
   function jget(u) {
     return fetch(u, { headers: { 'Accept': 'application/json' } }).then(function (r) {
@@ -1252,9 +1273,9 @@ if ('IntersectionObserver' in window) {
         var hit = assetOf(r, pair[0]);
         if (!hit) return;
         var l = document.createElement('a');
-        l.href = hit.url; l.textContent = pair[1];
+        l.href = accel(hit.url); l.textContent = pair[1];
         l.target = '_blank'; l.rel = 'noopener';
-        l.title = hit.name + (hit.size ? ' · ' + fsize(hit.size) : '');
+        l.title = hit.name + (hit.size ? ' · ' + fsize(hit.size) : '') + ' · 加速下载';
         links.appendChild(l);
       });
       row.appendChild(links);
@@ -1278,16 +1299,25 @@ if ('IntersectionObserver' in window) {
       var plat = el.getAttribute('data-asset');
       var a = assetOf(latest, plat);
       if (!a) { el.href = TAG + tag; return; }
-      el.href = a.url;
+      el.href = accel(a.url);
       el.textContent = a.name + (a.size ? ' · ' + fsize(a.size) : '');
+      var raw = document.querySelector('[data-raw="' + plat + '"]');
+      if (raw) raw.href = a.url;
     });
 
     Array.prototype.forEach.call(document.querySelectorAll('[data-plat]'), function (el) {
       el.addEventListener('click', function (ev) {
         var a = assetOf(latest, el.getAttribute('data-plat'));
-        if (a) { ev.preventDefault(); window.location.href = a.url; }
+        if (a) { ev.preventDefault(); window.location.href = accel(a.url); }
       });
     });
+
+    var sum = null;
+    (latest.assets || []).forEach(function (a) {
+      if (/SHA256SUMS/i.test(a.name || a.url || '')) sum = sum || a;
+    });
+    var sumEl = document.getElementById('sumLink');
+    if (sumEl && sum) sumEl.href = accel(sum.url);
 
     paintHistory(list, tag);
   }

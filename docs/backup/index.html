@@ -311,6 +311,12 @@ footer{padding:60px 0 44px;border-top:1px solid var(--line);margin-top:20px}
   table{min-width:620px}
   .f-bottom{flex-direction:column;gap:10px}
 }
+.acc-note{color:var(--muted);font-size:12.5px;line-height:1.8;margin:16px 0 10px}
+.acc-note b{color:var(--text)}
+.acc-note a{color:var(--acc);text-decoration:none;border-bottom:1px solid rgba(139,92,246,.4)}
+.raw-row{display:flex;flex-wrap:wrap;gap:14px;font-family:var(--mono);font-size:11.5px;margin:0 0 4px}
+.raw-row a{color:var(--muted);text-decoration:none;border-bottom:1px solid rgba(255,255,255,.18);padding-bottom:1px}
+.raw-row a:hover{color:var(--acc)}
 </style>
 </head>
 <body>
@@ -334,7 +340,7 @@ footer{padding:60px 0 44px;border-top:1px solid var(--line);margin-top:20px}
       <a href="#faq" data-sec="faq">排错</a>
     </div>
     <div class="nav-cta">
-      <span class="ver">v1.4.0 · 备用站</span>
+      <span class="ver"><span data-ver>v1.4.0</span> · 备用站</span>
       <a class="btn btn-ghost btn-sm" href="../">返回主站</a>
       <a class="btn btn-ghost btn-sm" href="https://github.com/Huangqia123/termux-ai-harness" target="_blank" rel="noopener">GitHub</a>
     </div>
@@ -573,30 +579,41 @@ termuxai-harness  <span class="c-com"># 说人话 → 命令 → 你确认</span
     </div>
 
     <div class="dl-grid">
-      <a class="dl reveal" href="https://github.com/Huangqia123/termux-ai-harness/releases" target="_blank" rel="noopener">
+      <a class="dl reveal" data-plat="android" href="https://github.com/Huangqia123/termux-ai-harness/releases/latest" target="_blank" rel="noopener">
         <div class="dl-top"><span class="os">Android</span><span class="fmt">APK</span></div>
         <div class="dl-file">TermuxAIHarness-1.4.0-android.apk</div>
         <div class="dl-tip">界面壳，推理仍走 Termux 里的 llama-server。打开自动扫 8080–8091。</div>
-        <div class="arrow">去 Release <span>→</span></div>
+        <div class="arrow">加速下载 <span>→</span></div>
       </a>
-      <a class="dl reveal" href="https://github.com/Huangqia123/termux-ai-harness/releases" target="_blank" rel="noopener">
+      <a class="dl reveal" data-plat="win" href="https://github.com/Huangqia123/termux-ai-harness/releases/latest" target="_blank" rel="noopener">
         <div class="dl-top"><span class="os">Windows</span><span class="fmt">ZIP</span></div>
         <div class="dl-file">TermuxAIHarness-1.4.0-win-x64.zip</div>
         <div class="dl-tip">解压双击 exe。未签名，SmartScreen 会拦一次，点「更多信息 → 仍要运行」。</div>
-        <div class="arrow">去 Release <span>→</span></div>
+        <div class="arrow">加速下载 <span>→</span></div>
       </a>
-      <a class="dl reveal" href="https://github.com/Huangqia123/termux-ai-harness/releases" target="_blank" rel="noopener">
+      <a class="dl reveal" data-plat="mac-arm" href="https://github.com/Huangqia123/termux-ai-harness/releases/latest" target="_blank" rel="noopener">
         <div class="dl-top"><span class="os">macOS</span><span class="fmt">ZIP</span></div>
         <div class="dl-file">…-mac-arm64.zip / …-mac-x64.zip</div>
         <div class="dl-tip">Apple 芯片选 arm64。未签名未公证，首次要右键 → 打开。</div>
-        <div class="arrow">去 Release <span>→</span></div>
+        <div class="arrow">加速下载 <span>→</span></div>
       </a>
-      <a class="dl reveal" href="https://github.com/Huangqia123/termux-ai-harness/releases" target="_blank" rel="noopener">
+      <a class="dl reveal" data-plat="linux" href="https://github.com/Huangqia123/termux-ai-harness/releases/latest" target="_blank" rel="noopener">
         <div class="dl-top"><span class="os">Linux</span><span class="fmt">APPIMAGE / DEB</span></div>
         <div class="dl-file">…-linux-x86_64.AppImage / …-amd64.deb</div>
         <div class="dl-tip">AppImage 记得 chmod +x；deb 走 sudo dpkg -i。</div>
-        <div class="arrow">去 Release <span>→</span></div>
+        <div class="arrow">加速下载 <span>→</span></div>
       </a>
+    </div>
+
+    <div class="acc-note">
+      <b>加速下载：</b>卡片默认走国内节点 <code>ghfast.top</code>，字节与 GitHub 原包一致；节点抽风时用下面这排原链。校验文件：<a id="sumLink" href="https://github.com/Huangqia123/termux-ai-harness/releases" target="_blank" rel="noopener">SHA256SUMS</a>。
+    </div>
+    <div class="raw-row" id="rawRow">
+      <a href="https://github.com/Huangqia123/termux-ai-harness/releases" target="_blank" rel="noopener">Android</a>
+      <a href="https://github.com/Huangqia123/termux-ai-harness/releases" target="_blank" rel="noopener">Windows</a>
+      <a href="https://github.com/Huangqia123/termux-ai-harness/releases" target="_blank" rel="noopener">macOS ARM</a>
+      <a href="https://github.com/Huangqia123/termux-ai-harness/releases" target="_blank" rel="noopener">macOS x64</a>
+      <a href="https://github.com/Huangqia123/termux-ai-harness/releases" target="_blank" rel="noopener">Linux</a>
     </div>
 
     <div class="note" style="margin-top:22px">
@@ -1024,5 +1041,50 @@ termuxai-harness  <span class="c-com"># 说人话 → 命令 → 你确认</span
 })();
 </script>
 
+
+<script>
+(function () {
+  var OWNER='Huangqia123', REPO='termux-ai-harness';
+  var API='https://api.github.com/repos/'+OWNER+'/'+REPO+'/releases?per_page=100';
+  var ALT='https://ungh.cc/repos/'+OWNER+'/'+REPO+'/releases';
+  var PROXY='https://ghfast.top/';
+  var PAT={android:/android\.apk$/i,win:/-win-x64\.zip$/i,'mac-arm':/-mac-arm64\.zip$/i,'mac-intel':/-mac-x64\.zip$/i,linux:/-linux-x86_64\.AppImage$/i};
+  function jget(u){return fetch(u,{headers:{Accept:'application/json'}}).then(function(r){if(!r.ok)throw new Error('http '+r.status);return r.json();});}
+  function norm(r){
+    return {tag:r.tag_name||r.tag, pre:!!r.prerelease, draft:!!r.draft,
+      assets:(r.assets||[]).map(function(a){
+        var u=a.browser_download_url||a.downloadUrl||'';
+        var n=a.name||decodeURIComponent(u.split('/').pop()||'');
+        return {name:n,url:u};
+      })};
+  }
+  function load(){return jget(API).then(function(l){return (l||[]).map(norm);})
+    .catch(function(){return jget(ALT).then(function(d){return (d.releases||[]).map(norm);});});}
+  function accel(u){return u && u.indexOf('http')===0 ? PROXY+u : u;}
+  function assetOf(rel,plat){var hit=null;(rel.assets||[]).forEach(function(a){if(PAT[plat]&&PAT[plat].test(a.name||a.url||''))hit=hit||a;});return hit;}
+
+  load().then(function(list){
+    var stable=list.filter(function(r){return !r.draft&&!r.pre;});
+    var latest=stable[0]||list[0]; if(!latest) return;
+    Array.prototype.forEach.call(document.querySelectorAll('[data-ver]'),function(e){e.textContent=latest.tag;});
+    Array.prototype.forEach.call(document.querySelectorAll('[data-plat]'),function(el){
+      var a=assetOf(latest,el.getAttribute('data-plat')); if(!a) return;
+      el.href=accel(a.url);
+      var f=el.querySelector('.dl-file'); if(f) f.textContent=a.name;
+    });
+    var row=document.getElementById('rawRow');
+    if(row){
+      row.innerHTML='';
+      [['android','Android'],['win','Windows'],['mac-arm','macOS ARM'],['mac-intel','macOS x64'],['linux','Linux']].forEach(function(p){
+        var a=assetOf(latest,p[0]); if(!a) return;
+        var l=document.createElement('a'); l.href=a.url; l.textContent=p[1];
+        l.target='_blank'; l.rel='noopener'; l.title=a.name; row.appendChild(l);
+      });
+    }
+    var sum=null;(latest.assets||[]).forEach(function(a){if(/SHA256SUMS/i.test(a.name||a.url||''))sum=sum||a;});
+    var se=document.getElementById('sumLink'); if(se&&sum) se.href=accel(sum.url);
+  }).catch(function(){});
+})();
+</script>
 </body>
 </html>
