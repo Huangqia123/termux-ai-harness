@@ -8,6 +8,7 @@ const http = require('node:http')
 const https = require('node:https')
 const { spawn } = require('node:child_process')
 const net = require('node:net')
+const { readPage, pickUrl } = require('./web')
 
 const BASE_PORT = 8080
 let activePort = BASE_PORT
@@ -123,7 +124,7 @@ function scanModels() {
       continue
     }
     for (const e of entries) {
-      if (!e.isFile()) continue
+      if (!e.isFile() && !e.isSymbolicLink()) continue
       if (!e.name.toLowerCase().endsWith('.gguf')) continue
       const full = path.join(dir, e.name)
       try {
@@ -655,6 +656,18 @@ function registerIpc() {
   })
 
   ipcMain.handle('search:web', async (e, query) => webSearch(String(query || '')))
+
+  // 真实访问网址：离屏加载 + 取正文 + 截图
+  ipcMain.handle('web:read', async (e, url, opts) => readPage(String(url || ''), opts || {}))
+  ipcMain.handle('web:read-from-text', async (e, text) => {
+    const url = pickUrl(String(text || ''))
+    if (!url) return null
+    try {
+      return await readPage(url)
+    } catch (err) {
+      return { url, error: err.message || String(err) }
+    }
+  })
 
   ipcMain.handle('open:external', (e, url) => {
     if (/^https?:/i.test(url)) shell.openExternal(url)

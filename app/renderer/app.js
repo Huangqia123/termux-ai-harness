@@ -211,7 +211,7 @@ async function start() {
   setStatus('正在加载模型，首次可能要十几秒', 'ok')
 
   try {
-    const res = await window.api.startEngine({ modelPath: selected, threads: state.cpuThreads, ctx: 2048 })
+    const res = await window.api.startEngine({ modelPath: selected, threads: state.cpuThreads, ctx: 4096 })
     showChat(res.endpoint)
   } catch (e) {
     setStatus('启动失败：' + e.message, 'err')
@@ -278,16 +278,58 @@ function aiBubble() {
   return current
 }
 
+function extractUrl(text) {
+  const m = String(text || '').match(/(?:https?:\/\/)?(?:[a-z0-9-]+\.)+[a-z]{2,}(?::\d+)?(?:\/[\w\-./?%&=#+~]*)?/i)
+  if (!m) return null
+  let u = m[0].replace(/[),.;'"，。；）]+$/, '')
+  if (!/^https?:\/\//i.test(u)) {
+    if (!/\.[a-z]{2,}(?:[:/]|$)/i.test(u)) return null
+    u = 'https://' + u
+  }
+  return /^https?:\/\//i.test(u) ? u : null
+}
+
+function addSys(text) {
+  const box = document.createElement('div')
+  box.className = 'msg sys'
+  box.textContent = text
+  $('messages').appendChild(box)
+  $('messages').scrollTop = $('messages').scrollHeight
+}
+
+function fileUrl(p) {
+  const s = String(p || '').replace(/\\/g, '/')
+  const prefix = /^[a-zA-Z]:/.test(s) ? 'file:///' : 'file://'
+  return prefix + encodeURI(s)
+}
+
+function addShot(src, url) {
+  const box = document.createElement('div')
+  box.className = 'msg shot'
+  const img = document.createElement('img')
+  img.src = /^data:/.test(String(src)) ? src : fileUrl(src)
+  img.alt = '网页截图'
+  img.title = '点击打开原图'
+  img.onclick = () => { if (url) window.api.openExternal(url) }
+  box.appendChild(img)
+  const cap = document.createElement('div')
+  cap.className = 'shot-cap'
+  cap.textContent = url || ''
+  box.appendChild(cap)
+  $('messages').appendChild(box)
+  $('messages').scrollTop = $('messages').scrollHeight
+}
+
 async function webContext(query) {
   try {
     const hits = await window.api.search(query)
-    if (!hits || !hits.length) return ''
+    if (!hits || !hits.length) return '\n\n（联网搜索没有返回结果。回答时说明没查到最新资料，不要编造。）'
     const lines = hits
       .map((h, i) => `[${i + 1}] ${h.title}\n${h.url}\n${h.snippet}`.trim())
       .join('\n\n')
     return `\n\n以下是通过联网搜索刚取回的资料，回答时优先采用，并在句末标注来源编号：\n${lines}`
-  } catch {
-    return ''
+  } catch (e) {
+    return '\n\n（联网搜索失败：' + (e.message || e) + '。如实告诉用户网络不通，不要编造搜索结果。）'
   }
 }
 
@@ -301,6 +343,34 @@ async function send(text) {
 
   try {
     let system = SYSTEM_PROMPT
+
+    // 消息里带网址 -> 真实打开、取正文、截图，再把内容喂给模型
+    const target = extractUrl(value)
+    if (target) {
+      cur.bodyEl.textContent = '正在打开 ' + target + ' …'
+      let page = null
+      try {
+        page = await window.api.readUrl(target)
+      } catch (e) {
+        page = { url: target, error: e.message || String(e) }
+      }
+      if (!page || page.error) {
+        const msg = (page && page.error) || '打不开这个网址'
+        addSys('❌ ' + msg)
+        system += '\n\n（用户要求查看网址 ' + target + '，但打开失败：' + msg + '。请如实告诉用户打不开，不要编造任何网页内容。）'
+      } else if (page.text) {
+        if (page.shot || page.shotDataUrl) addShot(page.shot || page.shotDataUrl, page.url)
+        addSys('🌐 已读取 ' + page.url + '（' + (page.chars || 0) + ' 字' + (page.shotDataUrl ? ' + 截图' : '') + '）')
+        system +=
+          '\n\n以下是网页的真实内容（网址 ' + page.url + '，标题：' + page.title + '）：\n"""\n' +
+          page.text +
+          '\n"""\n请严格依据上面的网页内容回答，网页里没有的信息不要编造。'
+      } else {
+        addSys('⚠️ 这个页面没取到正文，只有截图')
+        if (page.shot || page.shotDataUrl) addShot(page.shot || page.shotDataUrl, page.url)
+      }
+    }
+
     if ($('web-on') && $('web-on').checked) {
       cur.bodyEl.textContent = '联网搜索中…'
       system += await webContext(value)

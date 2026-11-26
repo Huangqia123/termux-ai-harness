@@ -1,6 +1,6 @@
 {
   "name": "termux-ai-harness-app",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "Termux AI Harness desktop app — offline AI terminal with model bootstrap",
   "main": "main.js",
   "author": {
@@ -24,6 +24,7 @@
     },
     "files": [
       "main.js",
+      "web.js",
       "preload.js",
       "renderer/**/*"
     ],

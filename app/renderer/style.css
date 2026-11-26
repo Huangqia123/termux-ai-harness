@@ -258,3 +258,7 @@ body {
 }
 
 .composer .toggle input { accent-color: #2fbf94; }
+
+.msg.shot { padding: 8px 10px 6px; background: var(--surface); border: 1px solid var(--line); align-self: flex-start; max-width: 78%; }
+.msg.shot img { display: block; width: 100%; border-radius: 8px; cursor: zoom-in; }
+.msg.shot .shot-cap { font-size: 11px; color: var(--muted); margin-top: 6px; word-break: break-all; }

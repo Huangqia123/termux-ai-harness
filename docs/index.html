@@ -727,6 +727,11 @@ footer { border-top: 1px solid var(--line); padding: 40px 0 60px; margin-top: 40
         <h3 data-i18n="feat.c6.t">3B 起步，格式更稳</h3>
         <p data-i18n="feat.c6.d">推荐 Qwen2.5-3B-Instruct Q4_K_M（约 1.8GB）。平板实测常规 9–15 token/s，短提示命中缓存可到 46–50。真正拉开差距的是它守得住 <code>CMD:</code> / <code>TEXT:</code> 协议，1.5B 经常忘。</p>
       </div>
+      <div class="card reveal">
+        <div class="card-ico">WEB</div>
+        <h3 data-i18n="feat.c7.t">会读网页，还会截图</h3>
+        <p data-i18n="feat.c7.d">聊天里带上网址，应用会用离屏窗口真实打开它，取回 JS 渲染后的正文并截图，再把内容交给模型回答。网页里没有的信息，模型不会编。</p>
+      </div>
     </div>
   </div>
 </section>
@@ -897,6 +902,8 @@ const I18N = {
     "feat.c5.d": "Termux / Linux / macOS 用 bash，Windows 用 PowerShell。接口地址、温度、超时全部走环境变量，两个平台行为一致。",
     "feat.c6.t": "3B 起步，格式更稳",
     "feat.c6.d": "推荐 Qwen2.5-3B-Instruct Q4_K_M（约 1.8GB）。平板实测常规 9–15 token/s，短提示命中缓存可到 46–50。真正拉开差距的是它守得住 <code>CMD:</code> / <code>TEXT:</code> 协议，1.5B 经常忘。",
+    "feat.c7.t": "会读网页，还会截图",
+    "feat.c7.d": "聊天里带上网址，应用会用离屏窗口真实打开它，取回 JS 渲染后的正文并截图，再把内容交给模型回答。网页里没有的信息，模型不会编。",
 
     "feat.h2": "为「真的能用」而设计",
     "feat.p": "不是又一个聊天框套壳。每个决定都围绕一个前提：这台机器可能是你唯一能用的那台。",
@@ -962,6 +969,8 @@ const I18N = {
     "feat.c5.t": "One design, two implementations",
     "feat.c5.d": "bash for Termux / Linux / macOS, PowerShell for Windows. Endpoint, temperature and timeout are all environment variables, and both platforms behave identically.",
     "feat.c6.t": "Start at 3B for stable formatting",
+    "feat.c7.t": "Reads the web, and screenshots it",
+    "feat.c7.d": "Drop a URL into the chat: the app opens it in an offscreen window, extracts the rendered text, captures a screenshot, and feeds both to the model. It answers from the page, not from guesses.",
     "feat.c6.d": "Recommended: Qwen2.5-3B-Instruct Q4_K_M (~1.8GB). Measured on a tablet: 9\u201315 tok/s typical, 46\u201350 on cache hits. What really matters is that it holds the <code>CMD:</code> / <code>TEXT:</code> protocol, which 1.5B often drops.",
 
     "feat.h2": "Built for machines you actually own",

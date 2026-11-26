@@ -443,6 +443,11 @@ footer{padding:60px 0 44px;border-top:1px solid var(--line);margin-top:20px}
         <p>输入框边上一个「联网」开关。开了先搜一遍再喂给模型，还要求它在句尾标来源编号。Bing 优先，DuckDuckGo、中文维基三级回退，全部免费无 key。</p>
       </div>
       <div class="feat reveal">
+        <div class="ico cy"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="15" rx="2"/><circle cx="8.5" cy="9.5" r="1.6"/><path d="M21 15l-5-5L5 19"/></svg></div>
+        <h3>网页读取 + 截图</h3>
+        <p>把网址丢进输入框，应用会用离屏窗口真实打开它，取回 JS 渲染后的正文并截一张图，正文和截图一起交给模型。页面里没有的信息，它不会编。v1.4.1 起全平台可用。</p>
+      </div>
+      <div class="feat reveal">
         <div class="ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M4 4l16 16"/></svg></div>
         <h3>人在回路</h3>
         <p>回复以 <code>CMD:</code> 或 <code>TEXT:</code> 开头分流。命令一定先打印出来，按 <code>y</code> 才执行。<code>rm -rf</code>、<code>mkfs</code>、fork bomb 直接拒绝，连按 y 的机会都不给。</p>
