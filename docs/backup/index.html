@@ -988,7 +988,7 @@ termuxai-harness  <span class="c-com"># 说人话 → 命令 → 你确认</span
         .then(function(list){
           var n = 0;
           (list || []).forEach(function(r){
-            (r.assets || []).forEach(function(a){ n += (a.download_count || 0); });
+            (r.assets || []).forEach(function(a){ if (/TermuxAIHarness/i.test(a.name || a.downloadUrl || '')) n += (a.download_count || 0); });
           });
           return n;
         })
@@ -997,14 +997,14 @@ termuxai-harness  <span class="c-com"># 说人话 → 命令 → 你确认</span
             .then(function(d){
               var n = 0;
               (d.releases || []).forEach(function(r){
-                (r.assets || []).forEach(function(a){ n += (a.downloadCount || a.download_count || 0); });
+                (r.assets || []).forEach(function(a){ if (/TermuxAIHarness/i.test(a.name || a.downloadUrl || '')) n += (a.downloadCount || a.download_count || 0); });
               });
               return n;
             })
             .catch(function(){
               return jget(altBase + '/releases/latest').then(function(d){
                 var r = d.release || d, n = 0;
-                (r.assets || []).forEach(function(a){ n += (a.downloadCount || a.download_count || 0); });
+                (r.assets || []).forEach(function(a){ if (/TermuxAIHarness/i.test(a.name || a.downloadUrl || '')) n += (a.downloadCount || a.download_count || 0); });
                 return n;
               });
             });
