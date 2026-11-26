@@ -20,6 +20,12 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Termux AI Harness — Android front end.
@@ -100,6 +106,7 @@ public class MainActivity extends Activity {
                 c.setRequestMethod("POST");
                 c.setDoOutput(true);
                 c.setRequestProperty("Content-Type", "application/json; charset=utf-8");
+                c.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36");
                 OutputStream os = c.getOutputStream();
                 os.write(body.getBytes("UTF-8"));
                 os.flush();
@@ -400,6 +407,7 @@ public class MainActivity extends Activity {
                         c.setRequestMethod("POST");
                         c.setDoOutput(true);
                         c.setRequestProperty("Content-Type", "application/json; charset=utf-8");
+                c.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36");
                         c.setRequestProperty("Accept", "text/event-stream");
                         OutputStream os = c.getOutputStream();
                         os.write(messagesJson.getBytes("UTF-8"));
@@ -424,6 +432,11 @@ public class MainActivity extends Activity {
                                 if (ch == null || ch.length() == 0) continue;
                                 JSONObject o = ch.getJSONObject(0);
                                 JSONObject delta = o.optJSONObject("delta");
+                                if (delta != null) {
+                                    String reason = delta.isNull("reasoning_content")
+                                            ? "" : delta.optString("reasoning_content", "");
+                                    if (reason.length() > 0) sendThink(cbId, reason);
+                                }
                                 String piece;
                                 if (delta != null) {
                                     piece = delta.isNull("content") ? "" : delta.optString("content", "");
@@ -446,6 +459,26 @@ public class MainActivity extends Activity {
                         try { if (br != null) br.close(); } catch (Exception ignored) {}
                         if (c != null) c.disconnect();
                     }
+                }
+            }).start();
+        }
+
+        /**
+         * Free, key-less web search: DuckDuckGo HTML first, Wikipedia API as
+         * fallback. Results come back as a JSON array string so the page does
+         * all the rendering.
+         */
+        @JavascriptInterface
+        public void webSearch(final String query, final String cbId) {
+            new Thread(new Runnable() {
+                public void run() {
+                    String json = "[]";
+                    try {
+                        json = searchBing(query);
+                        if ("[]".equals(json)) json = searchDuckDuckGo(query);
+                        if ("[]".equals(json)) json = searchWikipedia(query);
+                    } catch (Exception ignored) {}
+                    sendSearch(cbId, json);
                 }
             }).start();
         }
@@ -501,6 +534,141 @@ public class MainActivity extends Activity {
 
     private static String cut(String s, int max) {
         return s.length() <= max ? s : s.substring(0, max) + "…";
+    }
+
+    private void sendThink(String cbId, String piece) {
+        final String js = "window.__onThink("
+                + JSONObject.quote(cbId) + ","
+                + JSONObject.quote(piece) + ")";
+        runOnUiThread(new Runnable() {
+            public void run() {
+                if (web != null) web.evaluateJavascript(js, null);
+            }
+        });
+    }
+
+    private void sendSearch(String cbId, String jsonArray) {
+        final String js = "window.__onSearch("
+                + JSONObject.quote(cbId) + ","
+                + JSONObject.quote(jsonArray) + ")";
+        runOnUiThread(new Runnable() {
+            public void run() {
+                if (web != null) web.evaluateJavascript(js, null);
+            }
+        });
+    }
+
+    private static String searchBing(String q) {
+        try {
+            String html = fetch("https://cn.bing.com/search?q=" + URLEncoder.encode(q, "UTF-8"), null, 9000);
+            if (html == null) return "[]";
+            JSONArray arr = new JSONArray();
+            String[] blocks = html.split("class=\"b_algo\"");
+            Pattern hrefRe = Pattern.compile("href=\"(http[^\"]+)\"");
+            Pattern titleRe = Pattern.compile("<h2[^>]*>(.*?)</h2>", Pattern.DOTALL);
+            Pattern snipRe = Pattern.compile("<p[^>]*>(.*?)</p>", Pattern.DOTALL);
+            for (int k = 1; k < blocks.length && arr.length() < 5; k++) {
+                Matcher hm = hrefRe.matcher(blocks[k]);
+                Matcher tm = titleRe.matcher(blocks[k]);
+                if (!hm.find() || !tm.find()) continue;
+                Matcher pm = snipRe.matcher(blocks[k]);
+                JSONObject o = new JSONObject();
+                o.put("title", strip(tm.group(1)));
+                o.put("url", unwrapBing(hm.group(1)));
+                o.put("snippet", pm.find() ? strip(pm.group(1)) : "");
+                arr.put(o);
+            }
+            return arr.toString();
+        } catch (Exception e) {
+            return "[]";
+        }
+    }
+
+    private static String unwrapBing(String href) {
+        if (!href.contains("bing.com/ck/a")) return href;
+        int u = href.indexOf("u=a1");
+        if (u < 0) return href;
+        String b64 = href.substring(u + 4);
+        int amp = b64.indexOf('&');
+        if (amp > 0) b64 = b64.substring(0, amp);
+        try {
+            b64 = b64.replace('-', '+').replace('_', '/');
+            while (b64.length() % 4 != 0) b64 = b64 + "=";
+            byte[] raw = android.util.Base64.decode(b64, android.util.Base64.DEFAULT);
+            return new String(raw, "UTF-8");
+        } catch (Exception e) {
+            return href;
+        }
+    }
+
+    private static String strip(String html) {
+        String s = html.replaceAll("<[^>]+>", " ");
+        s = s.replace("&amp;", "&").replace("&quot;", "\"").replace("&#x27;", "'")
+                .replace("&#39;", "'").replace("&lt;", "<").replace("&gt;", ">")
+                .replace("&nbsp;", " ");
+        return s.replaceAll("\\s+", " ").trim();
+    }
+
+    private static String searchDuckDuckGo(String q) {
+        try {
+            String html = fetch("https://html.duckduckgo.com/html/?q=" + URLEncoder.encode(q, "UTF-8"), null, 8000);
+            if (html == null) return "[]";
+            JSONArray arr = new JSONArray();
+            Pattern snipRe = Pattern.compile("<a[^>]+class=\"result__snippet\"[^>]*>(.*?)</a>", Pattern.DOTALL);
+            Pattern linkRe = Pattern.compile("<a[^>]+class=\"result__a\"[^>]+href=\"([^\"]+)\"[^>]*>(.*?)</a>", Pattern.DOTALL);
+            List<String> snippets = new ArrayList<String>();
+            Matcher sm = snipRe.matcher(html);
+            while (sm.find() && snippets.size() < 10) snippets.add(strip(sm.group(1)));
+            Matcher lm = linkRe.matcher(html);
+            int i = 0;
+            while (lm.find() && arr.length() < 5) {
+                String href = lm.group(1);
+                int u = href.indexOf("uddg=");
+                if (u >= 0) {
+                    href = href.substring(u + 5);
+                    int amp = href.indexOf('&');
+                    if (amp > 0) href = href.substring(0, amp);
+                    href = URLDecoder.decode(href, "UTF-8");
+                }
+                if (href.startsWith("//")) href = "https:" + href;
+                if (!href.startsWith("http")) continue;
+                JSONObject o = new JSONObject();
+                o.put("title", strip(lm.group(2)));
+                o.put("url", href);
+                o.put("snippet", i < snippets.size() ? snippets.get(i) : "");
+                arr.put(o);
+                i++;
+            }
+            return arr.toString();
+        } catch (Exception e) {
+            return "[]";
+        }
+    }
+
+    private static String searchWikipedia(String q) {
+        try {
+            String raw = fetch("https://zh.wikipedia.org/w/api.php?action=query&list=search"
+                    + "&format=json&utf8=1&srlimit=5&srsearch=" + URLEncoder.encode(q, "UTF-8"), null, 8000);
+            if (raw == null) return "[]";
+            JSONObject j = new JSONObject(raw);
+            JSONObject q2 = j.optJSONObject("query");
+            if (q2 == null) return "[]";
+            JSONArray hits = q2.optJSONArray("search");
+            if (hits == null) return "[]";
+            JSONArray arr = new JSONArray();
+            for (int i = 0; i < hits.length(); i++) {
+                JSONObject h = hits.getJSONObject(i);
+                JSONObject o = new JSONObject();
+                String title = h.optString("title", "");
+                o.put("title", title);
+                o.put("url", "https://zh.wikipedia.org/wiki/" + URLEncoder.encode(title, "UTF-8"));
+                o.put("snippet", strip(h.optString("snippet", "")));
+                arr.put(o);
+            }
+            return arr.toString();
+        } catch (Exception e) {
+            return "[]";
+        }
     }
 
     private void toast(String text) {

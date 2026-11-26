@@ -1,5 +1,24 @@
 # Changelog
 
+## v1.4.0 - 2026-11-26
+
+新增「深度思考」和「联网搜索」，四平台同步。
+
+### 深度思考
+- 请求带 `chat_template_kwargs.enable_thinking = true`，支持思考的模型（Qwen3、DeepSeek-R1 蒸馏等）会先吐 `reasoning_content`
+- 客户端把 `reasoning_content` 单独收进气杯上方一个灰色思考框，正文照常流式输出；不支持思考的模型（Qwen2.5 等）自动降级成普通回复，不会报错
+- Android 走 `window.__onThink` + `sendThink()`，桌面端走 SSE 解析后 `chat:chunk` 事件
+
+### 联网搜索
+- 输入框旁新增「联网」开关，开了之后先搜一遍再把结果喂给模型，并要求它在句末标注来源编号
+- 搜索源全部免费、不需要 API key：**Bing（cn.bing.com）优先** → DuckDuckGo HTML → 中文维基百科 API，三级回退
+- Android 在 Java 侧抓取与解析（`webSearch(query, cbId)`），绕开 WebView 的跨域限制；桌面端在主进程里做
+- 搜索失败或没结果时静默降级，照常只靠模型自身知识回答
+
+### 其他
+- 版本号统一 1.4.0，Android versionCode 7
+- 「SocketTimeoutException 之后还能继续对话」属于本地推理慢导致的软超时，本次不改；深度思考开关打开后等待期间会先有思考文字，观感更好
+
 ## v1.3.0 - 2026-11-26
 
 正式版。四平台统一到 1.3.0，修掉回复开头的 `null`。

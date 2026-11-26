@@ -246,25 +246,77 @@ function addMsg(kind, text) {
   return box
 }
 
+let current = null
+
+window.api.onChunk((d) => {
+  if (!current || !d) return
+  if (d.type === 'think') {
+    current.thinkEl.style.display = 'block'
+    current.think += d.text
+    current.thinkEl.textContent = current.think
+  } else if (d.type === 'text') {
+    current.text += d.text
+    current.bodyEl.textContent = current.text
+  }
+  $('messages').scrollTop = $('messages').scrollHeight
+})
+
+function aiBubble() {
+  const box = document.createElement('div')
+  box.className = 'msg ai'
+  const thinkEl = document.createElement('div')
+  thinkEl.className = 'think'
+  thinkEl.style.display = 'none'
+  const bodyEl = document.createElement('div')
+  bodyEl.className = 'body'
+  bodyEl.textContent = '…'
+  box.appendChild(thinkEl)
+  box.appendChild(bodyEl)
+  $('messages').appendChild(box)
+  $('messages').scrollTop = $('messages').scrollHeight
+  current = { thinkEl, bodyEl, think: '', text: '' }
+  return current
+}
+
+async function webContext(query) {
+  try {
+    const hits = await window.api.search(query)
+    if (!hits || !hits.length) return ''
+    const lines = hits
+      .map((h, i) => `[${i + 1}] ${h.title}\n${h.url}\n${h.snippet}`.trim())
+      .join('\n\n')
+    return `\n\n以下是通过联网搜索刚取回的资料，回答时优先采用，并在句末标注来源编号：\n${lines}`
+  } catch {
+    return ''
+  }
+}
+
 async function send(text) {
   const value = text.trim()
   if (!value) return
   addMsg('user', value)
   $('input').value = ''
-  const pending = addMsg('ai', '…')
+  const cur = aiBubble()
   history.push({ role: 'user', content: value })
 
   try {
+    let system = SYSTEM_PROMPT
+    if ($('web-on') && $('web-on').checked) {
+      cur.bodyEl.textContent = '联网搜索中…'
+      system += await webContext(value)
+    }
     const res = await window.api.send([
-      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'system', content: system },
       ...history.slice(-12)
     ])
-    const answer = (res && res.content) || '（空回复）'
-    pending.textContent = answer
+    const answer = (res && res.content) || cur.text || '（空回复）'
+    cur.bodyEl.textContent = answer
     history.push({ role: 'assistant', content: answer })
   } catch (e) {
-    pending.textContent = '请求失败：' + e.message
-    pending.classList.add('sys')
+    cur.bodyEl.textContent = '请求失败：' + e.message
+    cur.bodyEl.style.color = '#ff8b8b'
+  } finally {
+    current = null
   }
 }
 

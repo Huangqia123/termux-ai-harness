@@ -225,3 +225,36 @@ body {
 .composer textarea:focus { border-color: rgba(0,229,160,.4); }
 
 
+
+/* thinking block + web toggle */
+.msg.ai .think {
+  margin: 0 0 8px;
+  padding: 8px 10px;
+  border-left: 2px solid #2b6a58;
+  background: #0d1512;
+  color: #7f9c92;
+  font-size: 12.5px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  border-radius: 4px;
+  max-height: 240px;
+  overflow: auto;
+}
+
+.msg.ai .body { white-space: pre-wrap; }
+
+.composer .toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 13px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.composer .toggle input { accent-color: #2fbf94; }

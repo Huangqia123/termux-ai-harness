@@ -399,28 +399,61 @@ function chat(messages) {
       messages,
       temperature: 0.7,
       max_tokens: 512,
-      stream: false
+      stream: true,
+      chat_template_kwargs: { enable_thinking: true }
     })
+
+    let think = ''
+    let answer = ''
+    let buffer = ''
 
     const req = http.request(
       `${endpoint()}/v1/chat/completions`,
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(body),
+          Accept: 'text/event-stream'
+        }
       },
       (res) => {
-        let data = ''
-        res.on('data', (c) => (data += c))
-        res.on('end', () => {
-          try {
-            const parsed = JSON.parse(data)
-            const msg = parsed.choices && parsed.choices[0] && parsed.choices[0].message
-            const text = msg && typeof msg.content === 'string' ? msg.content : ''
-            resolve({ ok: true, content: text, raw: parsed })
-          } catch (e) {
-            reject(new Error(`bad response: ${data.slice(0, 200)}`))
+        if (res.statusCode < 200 || res.statusCode >= 300) {
+          let err = ''
+          res.on('data', (c) => (err += c))
+          res.on('end', () => reject(new Error(`HTTP ${res.statusCode} ${err.slice(0, 200)}`)))
+          return
+        }
+        res.on('data', (chunk) => {
+          buffer += chunk.toString('utf8')
+          const lines = buffer.split('\n')
+          buffer = lines.pop()
+          for (const raw of lines) {
+            const line = raw.trim()
+            if (!line.startsWith('data:')) continue
+            const payload = line.slice(5).trim()
+            if (payload === '[DONE]') continue
+            let piece = null
+            try {
+              const j = JSON.parse(payload)
+              const delta = j.choices && j.choices[0] && j.choices[0].delta
+              if (delta) {
+                if (typeof delta.reasoning_content === 'string' && delta.reasoning_content) {
+                  think += delta.reasoning_content
+                  emitChunk({ type: 'think', text: delta.reasoning_content })
+                }
+                if (typeof delta.content === 'string' && delta.content) {
+                  answer += delta.content
+                  emitChunk({ type: 'text', text: delta.content })
+                }
+              }
+            } catch {
+              piece = null
+            }
           }
         })
+        res.on('end', () => resolve({ ok: true, content: answer, reasoning: think }))
+        res.on('error', reject)
       }
     )
     req.on('error', reject)
@@ -428,6 +461,126 @@ function chat(messages) {
     req.end()
   })
 }
+
+let chunkSink = null
+function emitChunk(payload) {
+  if (chunkSink) chunkSink(payload)
+}
+
+/* ---------------------------------------------------------------- search */
+
+function httpText(url, timeoutMs = 8000) {
+  return new Promise((resolve) => {
+    const mod = url.startsWith('https:') ? https : http
+    const req = mod.get(
+      url,
+      { headers: { 'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36' }, timeout: timeoutMs },
+      (res) => {
+        if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+          resolve(httpText(res.headers.location, timeoutMs))
+          res.resume()
+          return
+        }
+        let data = ''
+        res.on('data', (c) => (data += c))
+        res.on('end', () => resolve(data))
+      }
+    )
+    req.on('timeout', () => { req.destroy(); resolve('') })
+    req.on('error', () => resolve(''))
+  })
+}
+
+function decodeEntities(s) {
+  return String(s)
+    .replace(/<[^>]+>/g, '')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#x27;/g, "'")
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function unwrapBing(href) {
+  if (!href.includes('bing.com/ck/a')) return href
+  const m = href.match(/[?&]u=a1([^&]+)/)
+  if (!m) return href
+  try {
+    const b64 = m[1].replace(/-/g, '+').replace(/_/g, '/')
+    return Buffer.from(b64, 'base64').toString('utf8')
+  } catch {
+    return href
+  }
+}
+
+async function bingSearch(query) {
+  const html = await httpText('https://cn.bing.com/search?q=' + encodeURIComponent(query))
+  const out = []
+  const blocks = html.split('class="b_algo"').slice(1)
+  for (const block of blocks) {
+    const href = block.match(/href="(http[^"]+)"/)
+    const title = block.match(/<h2[^>]*>([\s\S]*?)<\/h2>/)
+    if (!href || !title) continue
+    const snip = block.match(/<p[^>]*>([\s\S]*?)<\/p>/)
+    out.push({
+      title: decodeEntities(title[1]),
+      url: unwrapBing(href[1]),
+      snippet: snip ? decodeEntities(snip[1]) : ''
+    })
+    if (out.length >= 5) break
+  }
+  return out
+}
+
+async function webSearch(query) {
+  const out = []
+  try {
+    const bing = await bingSearch(query)
+    if (bing.length) return bing
+  } catch {}
+  try {
+    const html = await httpText('https://html.duckduckgo.com/html/?q=' + encodeURIComponent(query))
+    const linkRe = /<a[^>]+class="result__a"[^>]+href="([^"]+)"[^>]*>(.*?)<\/a>/g
+    const snipRe = /<a[^>]+class="result__snippet"[^>]*>(.*?)<\/a>/g
+    const snippets = []
+    let m
+    while ((m = snipRe.exec(html))) snippets.push(decodeEntities(m[1]))
+    let i = 0
+    let hit
+    while ((hit = linkRe.exec(html)) && out.length < 5) {
+      let href = hit[1]
+      const uddg = href.match(/uddg=([^&]+)/)
+      if (uddg) href = decodeURIComponent(uddg[1])
+      if (href.startsWith('//')) href = 'https:' + href
+      if (!/^https?:/.test(href)) continue
+      out.push({ title: decodeEntities(hit[2]), url: href, snippet: snippets[i] || '' })
+      i++
+    }
+  } catch {}
+  if (out.length === 0) {
+    try {
+      const raw = await httpText(
+        'https://zh.wikipedia.org/w/api.php?action=query&list=search&format=json&utf8=1&srlimit=5&srsearch=' +
+          encodeURIComponent(query)
+      )
+      const j = JSON.parse(raw)
+      const hits = (j.query && j.query.search) || []
+      for (const h of hits) {
+        out.push({
+          title: h.title,
+          url: 'https://zh.wikipedia.org/wiki/' + encodeURIComponent(h.title),
+          snippet: decodeEntities(h.snippet || '')
+        })
+      }
+    } catch {}
+  }
+  return out
+}
+
 
 /* -------------------------------------------------------------------- ipc */
 
@@ -490,7 +643,18 @@ function registerIpc() {
     return true
   })
 
-  ipcMain.handle('chat:send', async (e, messages) => chat(messages))
+  ipcMain.handle('chat:send', async (event, messages) => {
+    chunkSink = (payload) => {
+      if (!event.sender.isDestroyed()) event.sender.send('chat:chunk', payload)
+    }
+    try {
+      return await chat(messages)
+    } finally {
+      chunkSink = null
+    }
+  })
+
+  ipcMain.handle('search:web', async (e, query) => webSearch(String(query || '')))
 
   ipcMain.handle('open:external', (e, url) => {
     if (/^https?:/i.test(url)) shell.openExternal(url)

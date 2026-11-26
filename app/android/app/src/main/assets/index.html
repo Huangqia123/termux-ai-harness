@@ -39,6 +39,12 @@
   .me{align-self:flex-end;background:#16232b;border:1px solid #24343f}
   .ai{align-self:flex-start;background:var(--surface);border:1px solid var(--line)}
   .sys{align-self:center;color:var(--muted);font-size:12px}
+  .msg .think{margin:0 0 8px;padding:8px 10px;border-left:2px solid #2b6a58;background:#0b1410;
+    color:#7f9c92;font-size:12px;line-height:1.55;white-space:pre-wrap;border-radius:5px;max-height:180px;overflow:auto}
+  .msg .body{white-space:pre-wrap}
+  .web-toggle{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted);
+    border:1px solid var(--line);border-radius:9px;padding:0 9px;user-select:none}
+  .web-toggle input{accent-color:#2fbf94}
   .composer{display:flex;gap:9px;padding:10px 14px calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--line);flex-shrink:0}
   textarea{flex:1;background:var(--surface);border:1px solid var(--line);border-radius:10px;color:var(--text);
            padding:11px 12px;font:inherit;font-size:14px;resize:none;outline:none;max-height:110px}
@@ -97,6 +103,7 @@
 
 <form class="composer hidden" id="composer">
   <textarea id="input" rows="1" placeholder="问点什么…"></textarea>
+  <label class="web-toggle" id="web-label"><input type="checkbox" id="web-on" /><span>联网</span></label>
   <button class="primary" type="submit">发送</button>
 </form>
 
@@ -186,21 +193,57 @@ function add(kind, text) {
 
 let streamEl = null
 
+window.__onThink = function (id, piece) {
+  if (!streamEl) return
+  streamEl.thinkEl.style.display = 'block'
+  streamEl.think += piece
+  streamEl.thinkEl.textContent = streamEl.think
+  const box = document.getElementById('msgs')
+  box.scrollTop = box.scrollHeight
+}
+
 window.__onChunk = function (id, piece) {
   if (!streamEl) return
-  if (streamEl.textContent === '…') streamEl.textContent = ''
-  streamEl.textContent += piece
+  if (streamEl.bodyEl.textContent === '…') streamEl.bodyEl.textContent = ''
+  streamEl.text += piece
+  streamEl.bodyEl.textContent = streamEl.text
   const box = document.getElementById('msgs')
   box.scrollTop = box.scrollHeight
 }
 
 window.__onChat = function (id, error, content) {
-  const el = streamEl || document.getElementById('pending')
-  if (!el) return
-  el.removeAttribute('id')
-  if (error) el.textContent = error
-  else if (content) el.textContent = content
+  if (!streamEl) return
+  streamEl.box.removeAttribute('id')
+  if (error) {
+    streamEl.bodyEl.textContent = error
+    streamEl.bodyEl.style.color = '#ff8b8b'
+  } else if (content) {
+    streamEl.text = content
+    streamEl.bodyEl.textContent = content
+  }
   streamEl = null
+}
+
+const searchWait = {}
+
+window.__onSearch = function (id, json) {
+  const fn = searchWait[id]
+  if (!fn) return
+  delete searchWait[id]
+  let hits = []
+  try { hits = JSON.parse(json) } catch (e) { hits = [] }
+  fn(hits)
+}
+
+function webSearch(q) {
+  return new Promise(function (resolve) {
+    const id = 's' + Date.now()
+    searchWait[id] = resolve
+    B.webSearch(q, id)
+    setTimeout(function () {
+      if (searchWait[id]) { delete searchWait[id]; resolve([]) }
+    }, 15000)
+  })
 }
 
 function send(text) {
@@ -209,19 +252,47 @@ function send(text) {
   if (!st.ok) { add('sys', '还没连上服务，先启动 llama-server'); return }
   add('me', v)
   document.getElementById('input').value = ''
-  const pending = add('ai', '…')
-  pending.id = 'pending'
-  streamEl = pending
+  const box = add('ai', '')
+  box.id = 'pending'
+  const thinkEl = document.createElement('div')
+  thinkEl.className = 'think'
+  thinkEl.style.display = 'none'
+  const bodyEl = document.createElement('div')
+  bodyEl.className = 'body'
+  bodyEl.textContent = '…'
+  box.appendChild(thinkEl)
+  box.appendChild(bodyEl)
+  streamEl = { box: box, thinkEl: thinkEl, bodyEl: bodyEl, think: '', text: '' }
   history.push({ role: 'user', content: v })
 
-  const body = JSON.stringify({
-    messages: [{ role: 'system', content: '你是一个完全本地运行的 AI 助手。回答简洁，不确定就说不确定。' }]
-      .concat(history.slice(-12)),
-    temperature: 0.7,
-    max_tokens: 512,
-    stream: true
-  })
-  B.chatStream(body, 'c' + Date.now())
+  let system = '你是一个完全本地运行的 AI 助手。回答简洁，不确定就说不确定。'
+  const go = function () {
+    const body = JSON.stringify({
+      messages: [{ role: 'system', content: system }].concat(history.slice(-12)),
+      temperature: 0.7,
+      max_tokens: 512,
+      stream: true,
+      chat_template_kwargs: { enable_thinking: true }
+    })
+    B.chatStream(body, 'c' + Date.now())
+  }
+
+  const webOn = document.getElementById('web-on')
+  if (webOn && webOn.checked) {
+    bodyEl.textContent = '联网搜索中…'
+    webSearch(v).then(function (hits) {
+      if (hits && hits.length) {
+        system += '\n\n以下是通过联网搜索刚取回的资料，回答时优先采用，并在句末标注来源编号：\n' +
+          hits.map(function (h, i) {
+            return '[' + (i + 1) + '] ' + h.title + '\n' + h.url + '\n' + h.snippet
+          }).join('\n\n')
+      }
+      bodyEl.textContent = '…'
+      go()
+    })
+  } else {
+    go()
+  }
 }
 
 const mask = document.getElementById('mask')
