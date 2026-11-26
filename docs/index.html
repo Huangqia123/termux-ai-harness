@@ -263,7 +263,9 @@ h2 {
 .section-head p { color: var(--muted); max-width: 660px; }
 
 /* ---------- feature grid ---------- */
-.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(228px, 1fr)); gap: 16px; }
+.grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 900px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .grid { grid-template-columns: minmax(0, 1fr); } }
 
 .card {
   background: var(--surface);
@@ -472,7 +474,7 @@ footer { border-top: 1px solid var(--line); padding: 40px 0 60px; margin-top: 40
   <div class="wrap">
     <div class="eyebrow">
       <span class="dot"></span>
-      <span data-i18n="hero.badge">v1.0.0 · 完全本地 · 无 API Key</span>
+      <span data-i18n="hero.badge">v1.0.1 · 完全本地 · 无 API Key</span>
     </div>
 
     <h1 data-i18n="hero.title">把任何一台机器<br>变成<span class="accent">离线 AI 终端</span>。</h1>
@@ -483,7 +485,7 @@ footer { border-top: 1px solid var(--line); padding: 40px 0 60px; margin-top: 40
     </p>
 
     <div class="cta-row">
-      <a class="btn btn-primary" href="https://github.com/Huangqia123/termux-ai-harness/releases/tag/v1.0.0" target="_blank" rel="noopener" data-i18n="hero.cta1">下载 v1.0.0</a>
+      <a class="btn btn-primary" href="https://github.com/Huangqia123/termux-ai-harness/releases/tag/v1.0.1" target="_blank" rel="noopener" data-i18n="hero.cta1">下载 v1.0.1</a>
       <a class="btn btn-ghost" href="https://github.com/Huangqia123/termux-ai-harness" target="_blank" rel="noopener" data-i18n="hero.cta2">查看源码</a>
     </div>
 
@@ -493,7 +495,7 @@ footer { border-top: 1px solid var(--line); padding: 40px 0 60px; margin-top: 40
         <span class="term-title">termux — termuxai-harness</span>
       </div>
       <div class="term-body">
-        <div class="term-line"><span class="prompt">$</span> <span class="cmd">llama-server -m qwen2.5-1.5b-instruct-q4_k_m.gguf -c 1024 --port 8080</span></div>
+        <div class="term-line"><span class="prompt">$</span> <span class="cmd">llama-server -m qwen2.5-3b-instruct-q4_k_m.gguf -c 2048 --port 8080 -t 4</span></div>
         <div class="term-line"><span class="out">main: server is listening on http://127.0.0.1:8080</span></div>
         <div class="term-line">&nbsp;</div>
         <div class="term-line"><span class="prompt">$</span> <span class="cmd">termuxai-harness</span></div>
@@ -505,8 +507,12 @@ footer { border-top: 1px solid var(--line); padding: 40px 0 60px; margin-top: 40
         <div class="term-line"><span class="cmd">ls -S | head -n 1</span></div>
         <div class="term-line"><span class="out">run it? [y/N]</span> <span class="cmd">y</span></div>
         <div class="term-line"><span class="out">--- output ---</span></div>
-        <div class="term-line"><span class="cmd">qwen2.5-1.5b-instruct-q4_k_m.gguf</span></div>
+        <div class="term-line"><span class="cmd">qwen2.5-3b-instruct-q4_k_m.gguf</span></div>
         <div class="term-line"><span class="out">--- exit code: 0 ---</span></div>
+        <div class="term-line">&nbsp;</div>
+        <div class="term-line"><span class="prompt">Task&gt;</span> <span class="cmd" data-i18n="term.ask">你是什么模型</span></div>
+        <div class="term-line"><span class="prompt">answer&gt;</span></div>
+        <div class="term-line"><span class="cmd" data-i18n="term.answer">我是 Qwen2.5-3B，跑在 127.0.0.1:8080，不联网也能回答。</span></div>
         <div class="term-line"><span class="prompt">Task&gt;</span> <span class="cursor"></span></div>
       </div>
     </div>
@@ -528,19 +534,29 @@ footer { border-top: 1px solid var(--line); padding: 40px 0 60px; margin-top: 40
         <p data-i18n="feat.c1.d">推理在本机，请求不出网卡。断网、飞行模式、无 SIM 卡，照常工作。没有账号体系，没有配额，没有「本月额度已用尽」。</p>
       </div>
       <div class="card reveal">
+        <div class="card-ico">ROUTE</div>
+        <h3 data-i18n="feat.c2.t">聊天和命令分开走</h3>
+        <p data-i18n="feat.c2.d">回复以 <code>CMD:</code> 或 <code>TEXT:</code> 开头。<code>TEXT</code> 直接当回答打印，永不进 shell；<code>CMD</code> 才展示、等确认。模型忘了标记时按形状兜底，宁可把命令当话，也不把话当命令。</p>
+      </div>
+      <div class="card reveal">
         <div class="card-ico">GUARD</div>
-        <h3 data-i18n="feat.c2.t">人在回路</h3>
-        <p data-i18n="feat.c2.d">生成的命令先打印出来，按 <code>y</code> 才执行。递归删除、磁盘格式化、关机重启、fork bomb 直接拒绝，连确认机会都不给。</p>
+        <h3 data-i18n="feat.c3.t">人在回路</h3>
+        <p data-i18n="feat.c3.d">生成的命令先打印出来，按 <code>y</code> 才执行。递归删除、磁盘格式化、关机重启、fork bomb 直接拒绝，连确认机会都不给。</p>
       </div>
       <div class="card reveal">
         <div class="card-ico">RETRY</div>
-        <h3 data-i18n="feat.c3.t">失败回灌</h3>
-        <p data-i18n="feat.c3.d">命令报错时，把命令原文和输出一起交回模型，让它给出修正版本，最多重试 <code>TERMUX_AI_MAX_RETRY</code> 次。</p>
+        <h3 data-i18n="feat.c4.t">失败回灌</h3>
+        <p data-i18n="feat.c4.d">命令报错时，把命令原文和输出一起交回模型，让它给出修正版本，最多重试 <code>TERMUX_AI_MAX_RETRY</code> 次。</p>
       </div>
       <div class="card reveal">
         <div class="card-ico">CROSS</div>
-        <h3 data-i18n="feat.c4.t">一套逻辑，两种实现</h3>
-        <p data-i18n="feat.c4.d">Termux / Linux / macOS 用 bash，Windows 用 PowerShell。接口地址、温度、超时全部走环境变量，两个平台行为一致。</p>
+        <h3 data-i18n="feat.c5.t">一套逻辑，两种实现</h3>
+        <p data-i18n="feat.c5.d">Termux / Linux / macOS 用 bash，Windows 用 PowerShell。接口地址、温度、超时全部走环境变量，两个平台行为一致。</p>
+      </div>
+      <div class="card reveal">
+        <div class="card-ico">MODEL</div>
+        <h3 data-i18n="feat.c6.t">3B 起步，格式更稳</h3>
+        <p data-i18n="feat.c6.d">推荐 Qwen2.5-3B-Instruct Q4_K_M（约 1.8GB）。平板实测常规 9~15 token/s，短提示命中缓存可到 46~50。真正拉开差距的是它守得住 <code>CMD:</code> / <code>TEXT:</code> 协议，1.5B 经常忘。</p>
       </div>
     </div>
   </div>
@@ -623,7 +639,7 @@ cd termux-ai-harness
 bash install.sh
 
 <span class="out"># 3. start the model server in another window</span>
-llama-server -m qwen2.5-1.5b-instruct-q4_k_m.gguf -c 1024 --port 8080
+llama-server -m qwen2.5-3b-instruct-q4_k_m.gguf -c 2048 --port 8080 -t 4
 
 <span class="out"># 4. run</span>
 termuxai              <span class="out"># chat</span>
@@ -670,22 +686,30 @@ const I18N = {
     "nav.platforms": "平台",
     "nav.install": "安装",
 
-    "hero.badge": "v1.0.0 · 完全本地 · 无 API Key",
+    "hero.badge": "v1.0.1 · 完全本地 · 无 API Key",
     "hero.title": "把任何一台机器<br>变成<span class=\"accent\">离线 AI 终端</span>。",
     "hero.sub": "一台平板、一台旧笔记本、一个开发板——只要能跑 llama.cpp，就能拥有自己的 AI。<br><strong>termuxai</strong> 负责对话，<strong>termuxai-harness</strong> 把自然语言变成 shell 命令，先给你看，按 <code>y</code> 才执行。",
-    "hero.cta1": "下载 v1.0.0",
+    "hero.cta1": "下载 v1.0.1",
     "hero.cta2": "查看源码",
     "term.task": "看看当前目录里最大的文件",
+    "term.ask": "你是什么模型",
+    "term.answer": "我是 Qwen2.5-3B，跑在 127.0.0.1:8080，不联网也能回答。",
+
+    "feat.c1.t": "全链路 127.0.0.1",
+    "feat.c1.d": "推理在本机，请求不出网卡。断网、飞行模式、无 SIM 卡，照常工作。没有账号体系，没有配额，没有「本月额度已用尽」。",
+    "feat.c2.t": "聊天和命令分开走",
+    "feat.c2.d": "回复以 <code>CMD:</code> 或 <code>TEXT:</code> 开头。<code>TEXT</code> 直接当回答打印，永不进 shell；<code>CMD</code> 才展示、等确认。模型忘了标记时按形状兜底，宁可把命令当话，也不把话当命令。",
+    "feat.c3.t": "人在回路",
+    "feat.c3.d": "生成的命令先打印出来，按 <code>y</code> 才执行。递归删除、磁盘格式化、关机重启、fork bomb 直接拒绝，连确认机会都不给。",
+    "feat.c4.t": "失败回灌",
+    "feat.c4.d": "命令报错时，把命令原文和输出一起交回模型，让它给出修正版本，最多重试 <code>TERMUX_AI_MAX_RETRY</code> 次。",
+    "feat.c5.t": "一套逻辑，两种实现",
+    "feat.c5.d": "Termux / Linux / macOS 用 bash，Windows 用 PowerShell。接口地址、温度、超时全部走环境变量，两个平台行为一致。",
+    "feat.c6.t": "3B 起步，格式更稳",
+    "feat.c6.d": "推荐 Qwen2.5-3B-Instruct Q4_K_M（约 1.8GB）。平板实测常规 9~15 token/s，短提示命中缓存可到 46~50。真正拉开差距的是它守得住 <code>CMD:</code> / <code>TEXT:</code> 协议，1.5B 经常忘。",
 
     "feat.h2": "为「真的能用」而设计",
     "feat.p": "不是又一个聊天框套壳。每个决定都围绕一个前提：这台机器可能是你唯一能用的那台。",
-    "feat.c1.t": "全链路 127.0.0.1",
-    "feat.c1.d": "推理在本机，请求不出网卡。断网、飞行模式、无 SIM 卡，照常工作。没有账号体系，没有配额，没有「本月额度已用尽」。",
-    "feat.c2.t": "人在回路",
-    "feat.c2.d": "生成的命令先打印出来，按 <code>y</code> 才执行。递归删除、磁盘格式化、关机重启、fork bomb 直接拒绝，连确认机会都不给。",
-    "feat.c3.t": "失败回灌",
-    "feat.c3.d": "命令报错时，把命令原文和输出一起交回模型，让它给出修正版本，最多重试 <code>TERMUX_AI_MAX_RETRY</code> 次。",
-    "feat.c4.t": "一套逻辑，两种实现",
     "feat.c4.d": "Termux / Linux / macOS 用 bash，Windows 用 PowerShell。接口地址、温度、超时全部走环境变量，两个平台行为一致。",
 
     "plt.h2": "你在哪台机器上，都行",
@@ -711,22 +735,30 @@ const I18N = {
     "nav.platforms": "Platforms",
     "nav.install": "Install",
 
-    "hero.badge": "v1.0.0 · Fully local · No API key",
+    "hero.badge": "v1.0.1 · Fully local · No API key",
     "hero.title": "Turn any machine into<br>an <span class=\"accent\">offline AI terminal</span>.",
     "hero.sub": "A tablet, an old laptop, a single-board computer — if it runs llama.cpp, it can run your own AI.<br><strong>termuxai</strong> handles the conversation. <strong>termuxai-harness</strong> turns plain language into shell commands, shows you the command, and runs it only after you press <code>y</code>.",
-    "hero.cta1": "Download v1.0.0",
+    "hero.cta1": "Download v1.0.1",
     "hero.cta2": "View source",
     "term.task": "find the largest file in this directory",
+    "term.ask": "what model are you",
+    "term.answer": "Qwen2.5-3B on 127.0.0.1:8080. Answers without a network.",
+
+    "feat.c1.t": "Everything on 127.0.0.1",
+    "feat.c1.d": "Inference runs locally; requests never leave the network card. Airplane mode, no SIM, no wifi — it still works. No account, no quota, no \u201cyou have reached your monthly limit\u201d.",
+    "feat.c2.t": "Chat and shell take different roads",
+    "feat.c2.d": "Replies start with <code>CMD:</code> or <code>TEXT:</code>. <code>TEXT</code> is printed as an answer and never reaches the shell; <code>CMD</code> is shown and waits for you. If the model forgets the prefix, shape decides — and when unsure, text wins.",
+    "feat.c3.t": "Human in the loop",
+    "feat.c3.d": "The generated command is printed first and runs only after you press <code>y</code>. Recursive deletes, disk formatting, shutdown, fork bombs are refused outright — with no confirmation prompt at all.",
+    "feat.c4.t": "Failure feedback",
+    "feat.c4.d": "When a command fails, its text and output go back to the model for a corrected attempt, up to <code>TERMUX_AI_MAX_RETRY</code> times.",
+    "feat.c5.t": "One design, two implementations",
+    "feat.c5.d": "bash for Termux / Linux / macOS, PowerShell for Windows. Endpoint, temperature and timeout are all environment variables, and both platforms behave identically.",
+    "feat.c6.t": "Start at 3B for stable formatting",
+    "feat.c6.d": "Recommended: Qwen2.5-3B-Instruct Q4_K_M (~1.8GB). Measured on a tablet: 9\u201315 tok/s typical, 46\u201350 on cache hits. What really matters is that it holds the <code>CMD:</code> / <code>TEXT:</code> protocol, which 1.5B often drops.",
 
     "feat.h2": "Built for machines you actually own",
     "feat.p": "Not another chat box wrapper. Every decision assumes one thing: this machine might be the only one you have.",
-    "feat.c1.t": "Everything on 127.0.0.1",
-    "feat.c1.d": "Inference runs locally; requests never leave the network card. Airplane mode, no SIM, no wifi — it still works. No account, no quota, no “you have reached your monthly limit”.",
-    "feat.c2.t": "Human in the loop",
-    "feat.c2.d": "The generated command is printed first and runs only after you press <code>y</code>. Recursive deletes, disk formatting, shutdown, fork bombs are refused outright — with no confirmation prompt at all.",
-    "feat.c3.t": "Failure feedback",
-    "feat.c3.d": "When a command fails, its text and output go back to the model for a corrected attempt, up to <code>TERMUX_AI_MAX_RETRY</code> times.",
-    "feat.c4.t": "One design, two implementations",
     "feat.c4.d": "bash for Termux / Linux / macOS, PowerShell for Windows. Endpoint, temperature and timeout are all environment variables, and both platforms behave identically.",
 
     "plt.h2": "Whatever you are running it on",

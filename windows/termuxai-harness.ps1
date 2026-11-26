@@ -4,7 +4,8 @@ Termux AI Harness - a minimal human-in-the-loop shell agent for Windows,
 backed by a local llama.cpp server.
 
 It turns natural language into PowerShell commands, screens them for dangerous
-patterns, shows them, and runs them only after explicit confirmation.
+patterns, shows them, and runs them only after explicit confirmation. Chat
+questions come back prefixed with TEXT: and are never executed.
 
 Works on Windows PowerShell 5.1 and PowerShell 7+.
 License: MIT
@@ -23,7 +24,15 @@ $MaxRetry = if ($env:TERMUX_AI_MAX_RETRY) { [int]$env:TERMUX_AI_MAX_RETRY } else
 $SystemPrompt = if ($env:TERMUX_AI_HARNESS_SYSTEM) {
     $env:TERMUX_AI_HARNESS_SYSTEM
 } else {
-    'You are Termux AI Harness on Windows. Reply with one PowerShell command only. No explanation, no comments, no markdown fences. The operator will review the command before it runs.'
+    @'
+You are Termux AI Harness on Windows, a PowerShell command generator running on a local llama.cpp model.
+
+Decide what the operator actually wants:
+- If they ask a question, want an explanation, or are just chatting: reply with TEXT: followed by your answer. Never invent a command in this case.
+- If they want something done on the machine: reply with CMD: followed by exactly one PowerShell command. No alternatives, no explanation, no markdown, no comments.
+
+Your reply must begin with CMD: or TEXT: and nothing else. Answer in the language the operator used, but keep the command itself plain ASCII.
+'@
 }
 
 $DangerPatterns = @(
@@ -52,7 +61,7 @@ function Write-Color([string]$Text, [string]$Color) {
     Write-Host $Text -ForegroundColor $Color
 }
 
-function Get-CommandText([string]$Requirement) {
+function Get-ModelReply([string]$Requirement) {
     $messages = @(
         @{ role = 'system'; content = $SystemPrompt },
         @{ role = 'user'; content = $Requirement }
@@ -87,17 +96,49 @@ function Get-CommandText([string]$Requirement) {
     }
 
     $raw = $resp.choices[0].message.content
+    if (-not $raw) { $raw = $resp.choices[0].text }
     if (-not $raw) {
         Write-Color 'no content in response' 'Red'
         return $null
     }
 
-    $lines = $raw -split "`r?`n" | Where-Object {
+    return (ConvertFrom-Reply $raw)
+}
+
+# Turns a model reply into an object with Type (text|cmd) and Body.
+function ConvertFrom-Reply([string]$Raw) {
+    $stripped = $Raw -replace '^(?s)\s*(```[a-zA-Z0-9_+-]*\s*)?', ''
+    $firstLine = ($stripped -split "`r?`n" | Where-Object { $_.Trim() -ne '' } | Select-Object -First 1)
+    if (-not $firstLine) { return $null }
+
+    if ($firstLine -match '^(CMD|TEXT)\s*[:：]' -or $firstLine -match '^【(CMD|TEXT)】' -or $firstLine -match '^\[(CMD|TEXT)\]') {
+        $kind = if ($firstLine -match 'CMD') { 'cmd' } else { 'text' }
+        $body = $stripped -replace '(?s)^\s*(CMD\s*[:：]|TEXT\s*[:：]|【CMD】|【TEXT】|\[CMD\]|\[TEXT\])\s*', ''
+        return [pscustomobject]@{ Type = $kind; Body = $body }
+    }
+
+    # No marker: judge by shape. A wrong guess in the text direction only prints
+    # the text instead of running it, so the fallback leans to prose.
+    $lines = @($stripped -split "`r?`n" | Where-Object { $_.Trim() -ne '' })
+    if ($lines.Count -gt 1) {
+        return [pscustomobject]@{ Type = 'text'; Body = $stripped }
+    }
+
+    $first = ($stripped.Trim() -split '\s+')[0]
+    if ($first -and (Get-Command $first -ErrorAction SilentlyContinue) -and $first -match '^[A-Za-z0-9_.\\/-]+$') {
+        return [pscustomobject]@{ Type = 'cmd'; Body = $stripped }
+    }
+
+    return [pscustomobject]@{ Type = 'text'; Body = $stripped }
+}
+
+function ConvertTo-CommandText([string]$Body) {
+    $lines = $Body -split "`r?`n" | Where-Object {
         $t = $_.Trim()
         $t -ne '' -and $t -notmatch '^```' -and $t -notmatch '^\s*#'
     } | ForEach-Object { $_.Trim() -replace '^\$\s*', '' }
 
-    if ($lines.Count -eq 0) { return $null }
+    if (-not $lines -or $lines.Count -eq 0) { return $null }
     if ($lines.Count -gt 5) { $lines = $lines[0..4] }
 
     return ($lines -join '; ')
@@ -132,7 +173,7 @@ function Invoke-CommandText([string]$Command) {
 
 Write-Host 'Termux AI Harness' -ForegroundColor Cyan
 Write-Host "endpoint: $Endpoint"
-Write-Host 'mode: human in the loop (command is shown, you confirm, then it runs)'
+Write-Host 'mode: human in the loop (chat is answered, commands are shown and need y)'
 Write-Host 'commands: /exit  quit   /help  help'
 Write-Host ''
 
@@ -150,8 +191,8 @@ while ($true) {
         return
     }
     if ($request -eq '/help') {
-        Write-Host 'Describe what you want done in plain language.'
-        Write-Host 'Press y to run the generated command.'
+        Write-Host 'Describe what you want done in plain language, or just ask a question.'
+        Write-Host 'Questions are answered directly. Commands are shown first; press y to run.'
         continue
     }
 
@@ -159,8 +200,21 @@ while ($true) {
     $context = $request
 
     while ($true) {
-        $command = Get-CommandText $context
-        if (-not $command) { break }
+        $reply = Get-ModelReply $context
+        if (-not $reply) { break }
+
+        if ($reply.Type -eq 'text') {
+            Write-Host ''
+            Write-Color 'answer>' 'Green'
+            Write-Host $reply.Body
+            break
+        }
+
+        $command = ConvertTo-CommandText $reply.Body
+        if (-not $command) {
+            Write-Color 'agent returned no command' 'Yellow'
+            break
+        }
 
         $danger = Test-Dangerous $command
         if ($danger) {
@@ -205,7 +259,7 @@ The previous command failed:
 $command
 Its output was:
 $script:LastOutput
-Reply with a corrected command.
+Reply with a corrected command starting with CMD:.
 "@
     }
 }

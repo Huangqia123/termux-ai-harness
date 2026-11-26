@@ -5,6 +5,9 @@
 # screens them for dangerous patterns, shows them to the operator and runs
 # them only after explicit confirmation.
 #
+# The model answers in one of two shapes, and the harness routes them
+# differently: TEXT: is printed and never executed, CMD: is offered for review.
+#
 # Requires: curl, jq
 # License: MIT
 #
@@ -19,7 +22,15 @@ TIMEOUT="${TERMUX_AI_TIMEOUT:-120}"
 AUTO_RETRY="${TERMUX_AI_AUTO_RETRY:-0}"
 MAX_RETRY="${TERMUX_AI_MAX_RETRY:-2}"
 
-SYSTEM_PROMPT="${TERMUX_AI_HARNESS_SYSTEM:-You are Termux AI Harness, a shell command generator for Termux on Android. Reply with shell commands only. No explanation, no comments, no markdown fences. Output at most one line. The operator will review the command before it runs.}"
+DEFAULT_PROMPT='You are Termux AI Harness, a shell command generator running on a local llama.cpp model.
+
+Decide what the operator actually wants:
+- If they ask a question, want an explanation, or are just chatting: reply with TEXT: followed by your answer. Never invent a command in this case.
+- If they want something done on the machine: reply with CMD: followed by exactly one shell command. No alternatives, no explanation, no markdown, no comments.
+
+Your reply must begin with CMD: or TEXT: and nothing else. Answer in the language the operator used, but keep the command itself plain ASCII.'
+
+SYSTEM_PROMPT="${TERMUX_AI_HARNESS_SYSTEM:-$DEFAULT_PROMPT}"
 
 # Dangerous pattern blacklist. Matched against the generated command.
 DANGER_PATTERN='rm[[:space:]]+-[a-zA-Z]*[rf]|rm[[:space:]]+--(recursive|force)|mkfs|dd[[:space:]]+of=|shutdown|reboot|poweroff|halt|chmod[[:space:]]+-R[[:space:]]+777[[:space:]]+/|mv[[:space:]]+/\S+[[:space:]]+/\S+|:[[:space:]]*\(\)[[:space:]]*\{'
@@ -32,7 +43,7 @@ die() {
 command -v curl >/dev/null 2>&1 || die "curl not found. Install it with: pkg install curl"
 command -v jq >/dev/null 2>&1 || die "jq not found. Install it with: pkg install jq"
 
-request_command() {
+request_reply() {
     local prompt="$1"
     local extra='{}'
     [ -n "$MODEL" ] && extra=$(jq -n --arg m "$MODEL" '{model:$m}')
@@ -64,25 +75,99 @@ request_command() {
     fi
 
     local raw
-    raw=$(jq -r '.choices[0].message.content // empty' <<<"$resp" 2>/dev/null)
+    raw=$(jq -r '.choices[0].message.content // .choices[0].text // empty' <<<"$resp" 2>/dev/null)
     [ -n "$raw" ] || { printf 'error: no content in response\n' >&2; return 1; }
 
-    # Strip markdown fences, comments and blank lines, keep the command lines.
-    printf '%s\n' "$raw" \
-        | sed -e 's/^```[a-zA-Z]*$//' -e 's/^```$//' \
-        | grep -v '^[[:space:]]*#' \
-        | grep -v '^[[:space:]]*$' \
-        | sed -e 's/^[[:space:]]*\$[[:space:]]*//' \
-        | head -n 5
+    printf '%s\n' "$raw"
+}
+
+# Does this one-liner plausibly run in a shell?
+looks_like_command() {
+    local c="$1" first
+    c=$(printf '%s' "$c" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
+    [ -n "$c" ] || return 1
+
+    case "$c" in
+        *'|'*|*'>'*|*'<'*|*'&&'*|*'$('*|*'`'*) return 0 ;;
+    esac
+
+    first=${c%% *}
+    case "$first" in
+        *[![:print:]]*) return 1 ;;
+    esac
+    command -v "$first" >/dev/null 2>&1
+}
+
+# Splits a model reply into REPLY_TYPE (text|cmd) and REPLY_BODY.
+# Understands CMD: / TEXT: plus the CJK bracket forms 【CMD】【TEXT】.
+parse_reply() {
+    local raw first_line stripped
+
+    raw=$(printf '%s\n' "$1" | sed -E -e 's/^[[:space:]]*```[a-zA-Z0-9_+-]*[[:space:]]*$//' -e 's/^[[:space:]]*```[[:space:]]*$//')
+    first_line=$(printf '%s\n' "$raw" | sed -e '/^[[:space:]]*$/d' | head -n 1)
+    [ -n "$first_line" ] || return 1
+
+    stripped=$(printf '%s\n' "$raw" \
+        | sed -E -e '1s/^[[:space:]]*(CMD:|CMD：|【CMD】|\[CMD\])[[:space:]]*//' \
+                 -e '1s/^[[:space:]]*(TEXT:|TEXT：|【TEXT】|\[TEXT\])[[:space:]]*//')
+
+    case "$first_line" in
+        CMD:*|CMD：*|【CMD】*|'[CMD]'*)
+            REPLY_TYPE=cmd
+            REPLY_BODY="$stripped"
+            return 0
+            ;;
+        TEXT:*|TEXT：*|【TEXT】*|'[TEXT]'*)
+            REPLY_TYPE=text
+            REPLY_BODY="$stripped"
+            return 0
+            ;;
+    esac
+
+    # No marker: judge by shape. Anything that reads like prose stays prose,
+    # because a mistake in that direction only prints text instead of running it.
+    local lines
+    lines=$(printf '%s\n' "$raw" | grep -cve '^[[:space:]]*$')
+    if [ "$lines" -gt 1 ]; then
+        REPLY_TYPE=text
+        REPLY_BODY="$raw"
+    elif looks_like_command "$raw"; then
+        REPLY_TYPE=cmd
+        REPLY_BODY="$raw"
+    else
+        REPLY_TYPE=text
+        REPLY_BODY="$raw"
+    fi
+    return 0
 }
 
 is_dangerous() {
     printf '%s\n' "$1" | grep -qiE "$DANGER_PATTERN"
 }
 
+# Strip fences, comments, prompt echoes and blank lines from a command block.
+clean_cmd() {
+    printf '%s\n' "$1" \
+        | sed -E -e 's/^[[:space:]]*```[a-zA-Z0-9_+-]*[[:space:]]*$//' -e 's/^[[:space:]]*```[[:space:]]*$//' \
+        | grep -v '^[[:space:]]*#' \
+        | grep -v '^[[:space:]]*$' \
+        | sed -e 's/^[[:space:]]*\$[[:space:]]*//' \
+        | head -n 5
+}
+
+# Turn a multi-line command block into a single line joined by &&.
+join_cmd() {
+    printf '%s\n' "$1" | awk 'NF { if (n++) printf " && "; printf "%s", $0 } END { printf "\n" }'
+}
+
 show_cmd() {
     printf '\n\033[36mgenerated>\033[0m\n'
     printf '\033[33m%s\033[0m\n' "$1"
+}
+
+show_text() {
+    printf '\n\033[32manswer>\033[0m\n'
+    printf '%s\n' "$1"
 }
 
 run_cmd() {
@@ -94,14 +179,9 @@ run_cmd() {
     return $rc
 }
 
-# Turn a multi-line command block into a single line joined by &&.
-join_cmd() {
-    printf '%s\n' "$1" | awk 'NF { if (n++) printf " && "; printf "%s", $0 } END { printf "\n" }'
-}
-
 printf '\033[36mTermux AI Harness\033[0m\n'
 printf 'endpoint: %s\n' "$API_URL"
-printf 'mode: human in the loop (command is shown, you confirm, then it runs)\n'
+printf 'mode: human in the loop (chat is answered, commands are shown and need y)\n'
 printf 'commands: /exit  quit   /help  help\n'
 
 while :; do
@@ -112,8 +192,8 @@ while :; do
         ''|' '*|$'\t'*) continue ;;
         /exit|/quit|exit|quit) break ;;
         /help)
-            printf 'Describe what you want done in plain language.\n'
-            printf 'The agent replies with a shell command; press y to run it.\n'
+            printf 'Describe what you want done in plain language, or just ask a question.\n'
+            printf 'Questions are answered directly. Commands are shown first; press y to run.\n'
             continue
             ;;
     esac
@@ -122,7 +202,19 @@ while :; do
     context="$req"
 
     while :; do
-        cmd=$(request_command "$context") || break
+        reply=$(request_reply "$context") || break
+
+        if ! parse_reply "$reply"; then
+            printf 'agent returned an empty reply\n'
+            break
+        fi
+
+        if [ "$REPLY_TYPE" = text ]; then
+            show_text "$REPLY_BODY"
+            break
+        fi
+
+        cmd=$(clean_cmd "$REPLY_BODY")
         [ -n "$cmd" ] || { printf 'agent returned no command\n'; break; }
 
         cmd=$(join_cmd "$cmd")
@@ -162,7 +254,7 @@ The previous command failed:
 $cmd
 Its output was:
 $OUTPUT
-Reply with a corrected command."
+Reply with a corrected command starting with CMD:."
         continue
     done
 done
