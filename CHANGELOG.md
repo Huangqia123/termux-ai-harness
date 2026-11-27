@@ -1,5 +1,24 @@
 # Changelog
 
+## v1.4.3 - 2026-11-27
+
+全平台界面加中英双语切换（i18n），四端界面文案对齐。
+
+### 双语切换
+- 右上角新增语言按钮：中文界面显示 `EN`，英文界面显示 `中`，点击即时切换
+- 选择记在 `localStorage['tih-lang']`，下次打开沿用上次的语言
+- 静态文案走 `data-i18n` 属性，动态状态/提示/徽标/按钮文案走 `I18N.tx()` 规则表，模型目录带 `tierEn` / `noteEn` 英文字段
+- 模型系统提示同步双语：英文界面下让模型用英文回答
+
+### 四端覆盖
+- 网页浏览版 `docs/web/`：新增 `i18n.js`，`index.html` 静态文本全部挂 key
+- Android WebView（`android/assets/`）
+- 桌面端 Electron（`app/renderer/`）
+- 静态资源加 `?v=1.4.3` 后缀，避免浏览器/WebView 缓存旧 JS
+
+### 版本
+- 桌面端 1.4.3，Android versionCode 1040300 / versionName 1.4.3
+
 ## v1.4.0 - 2026-11-26
 
 新增「深度思考」和「联网搜索」，四平台同步。

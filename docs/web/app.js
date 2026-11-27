@@ -1,6 +1,7 @@
 'use strict'
 
 const $ = (id) => document.getElementById(id)
+const tx = (v) => (window.I18N ? I18N.tx(v) : v)
 
 let state = null
 let selected = null
@@ -13,7 +14,7 @@ const SYSTEM_PROMPT =
 /* ----------------------------------------------------------------- boot */
 
 function setStatus(text, kind) {
-  $('status-text').textContent = text
+  $('status-text').textContent = window.I18N ? I18N.tx(text) : text
   const dot = $('dot')
   dot.className = 'dot' + (kind ? ' ' + kind : '')
 }
@@ -80,16 +81,16 @@ function renderEngine() {
   const badge = $('engine-badge')
   const hint = $('engine-hint')
   if (state.engine) {
-    badge.textContent = '已就绪'
+    badge.textContent = window.I18N ? I18N.t('badge.ok') : '已就绪'
     badge.className = 'badge ok'
-    hint.innerHTML = '找到推理引擎：<code class="mono">' + state.engine + '</code>'
+    hint.innerHTML = (window.I18N ? I18N.t('hint.engineFound') : '找到推理引擎：') + '<code class="mono">' + state.engine + '</code>'
     setStatus('环境正常，等待选择模型', 'ok')
   } else {
-    badge.textContent = '未找到'
+    badge.textContent = window.I18N ? I18N.t('badge.missing') : '未找到'
     badge.className = 'badge warn'
-    hint.innerHTML =
-      '没找到 <code class="mono">llama-server</code>。装好 llama.cpp 后把它放进 PATH，或点下面手动指定；' +
-      '下完模型它会自动调用，不需要你配置端口。'
+    hint.innerHTML = window.I18N
+      ? I18N.t('hint.engineMissing')
+      : '没找到 <code class="mono">llama-server</code>。装好 llama.cpp 后把它放进 PATH，或点下面手动指定；下完模型它会自动调用，不需要你配置端口。'
     setStatus('缺少推理引擎', 'err')
   }
 }
@@ -105,25 +106,25 @@ function renderModels() {
   const found = state.models
 
   if (found.length === 0) {
-    badge.textContent = '未发现模型'
+    badge.textContent = tx('未发现模型')
     badge.className = 'badge warn'
-    hint.innerHTML = '本地没有 GGUF。下面是官网那 6 个，点一个就会自动下载到应用目录，下完自动选中。'
+    hint.innerHTML = tx('本地没有 GGUF。下面是官网那 6 个，点一个就会自动下载到应用目录，下完自动选中。')
     renderCatalog()
     return
   }
 
   if (found.length === 1) {
-    badge.textContent = '1 个'
+    badge.textContent = tx('1 个')
     badge.className = 'badge ok'
-    hint.textContent = '只发现一个模型，直接用它。'
+    hint.textContent = tx('只发现一个模型，直接用它。')
     selected = found[0].path
     renderFoundCards(found, true)
     return
   }
 
-  badge.textContent = found.length + ' 个'
+  badge.textContent = tx(found.length + ' 个')
   badge.className = 'badge ok'
-  hint.textContent = '发现多个模型，挑一个来跑。同时只启动一个，避免内存被打爆。'
+  hint.textContent = tx('发现多个模型，挑一个来跑。同时只启动一个，避免内存被打爆。')
   renderFoundCards(found, false)
 }
 
@@ -133,7 +134,7 @@ function renderFoundCards(found, auto) {
     const card = document.createElement('div')
     card.className = 'model-card' + (auto ? ' selected' : '')
     card.innerHTML =
-      '<span class="tier">本地</span>' +
+      '<span class="tier">' + (window.I18N ? I18N.t('tier.local') : '本地') + '</span>' +
       '<h3>' + escapeHtml(m.name) + '</h3>' +
       '<div class="meta">' + fmtSize(m.size) + '</div>' +
       '<div class="note">' + escapeHtml(m.dir) + '</div>'
@@ -154,10 +155,10 @@ function renderCatalog() {
     card.className = 'model-card'
     card.dataset.id = item.id
     card.innerHTML =
-      '<span class="tier">' + item.tier + '</span>' +
+      '<span class="tier">' + (window.I18N && I18N.lang === 'en' && item.tierEn ? item.tierEn : item.tier) + '</span>' +
       '<h3>' + escapeHtml(item.name) + '</h3>' +
-      '<div class="meta">' + item.sizeLabel + ' · 约 ' + item.ram + ' 内存</div>' +
-      '<div class="note">' + escapeHtml(item.note) + '</div>' +
+      '<div class="meta">' + item.sizeLabel + (window.I18N ? I18N.t('meta.ram', { ram: item.ram }) : ' · 约 ' + item.ram + ' 内存') + '</div>' +
+      '<div class="note">' + escapeHtml(window.I18N && I18N.lang === 'en' && item.noteEn ? item.noteEn : item.note) + '</div>' +
       '<div class="progress"><span></span></div>'
     card.onclick = () => startDownload(item, card)
     list.appendChild(card)
@@ -198,9 +199,10 @@ function updateStart() {
   const note = $('launch-note')
   const canStart = !!selected && !!state.engine
   btn.disabled = !canStart
-  if (!state.engine) note.textContent = '先解决 llama-server'
-  else if (!selected) note.textContent = '先选一个模型'
-  else note.textContent = '将监听 127.0.0.1:' + 8080 + ' 并自动进入聊天'
+  const txf = window.I18N ? I18N.tx : function (v) { return v }
+  if (!state.engine) note.textContent = txf('先解决 llama-server')
+  else if (!selected) note.textContent = txf('先选一个模型')
+  else note.textContent = txf('将监听 127.0.0.1:' + 8080 + ' 并自动进入聊天')
 
   const chatModel = $('chat-model')
   if (chatModel && selected) chatModel.textContent = selected.split(/[\\/]/).pop()
@@ -210,7 +212,7 @@ async function start() {
   if (!selected) return
   const btn = $('btn-start')
   btn.disabled = true
-  btn.textContent = '正在启动…'
+  btn.textContent = window.I18N ? I18N.tx('正在启动…') : '正在启动…'
   setStatus('正在加载模型，首次可能要十几秒', 'ok')
 
   try {
@@ -219,13 +221,13 @@ async function start() {
   } catch (e) {
     setStatus('启动失败：' + e.message, 'err')
     btn.disabled = false
-    btn.textContent = '重试启动'
+    btn.textContent = window.I18N ? I18N.tx('重试启动') : '重试启动'
     const log = $('engine-log')
     log.classList.add('show')
     log.textContent += '\n启动失败：' + e.message + '\n'
     return
   }
-  btn.textContent = '启动并进入聊天'
+  btn.textContent = window.I18N ? I18N.t('btn.start') : '启动并进入聊天'
 }
 
 /* ------------------------------------------------------------------ chat */
@@ -243,7 +245,7 @@ function showChat(endpoint) {
 function addMsg(kind, text) {
   const box = document.createElement('div')
   box.className = 'msg ' + kind
-  box.textContent = text
+  box.textContent = window.I18N ? I18N.tx(text) : text
   $('messages').appendChild(box)
   $('messages').scrollTop = $('messages').scrollHeight
   return box
@@ -310,7 +312,7 @@ function fileToDataUrl(file, maxSide) {
 function setPendingImage(dataUrl) {
   pendingImage = dataUrl
   const btn = $('btn-img')
-  if (btn) btn.textContent = '图片 ✓'
+  if (btn) btn.textContent = window.I18N ? I18N.tx('图片 ✓') : '图片 ✓'
   addSys('已选好一张图片，发送时会一起交给模型')
 }
 
@@ -338,7 +340,7 @@ function extractUrl(text) {
 function addSys(text) {
   const box = document.createElement('div')
   box.className = 'msg sys'
-  box.textContent = text
+  box.textContent = window.I18N ? I18N.tx(text) : text
   $('messages').appendChild(box)
   $('messages').scrollTop = $('messages').scrollHeight
 }
@@ -385,7 +387,7 @@ async function send(text) {
   const img = pendingImage
   pendingImage = null
   const imgBtn = $('btn-img')
-  if (imgBtn) imgBtn.textContent = '图片'
+  if (imgBtn) imgBtn.textContent = window.I18N ? I18N.t('btn.img') : '图片'
 
   addMsg('user', value || '（发送了一张图片）')
   if (img) addShot(img, '')
@@ -473,7 +475,7 @@ window.api.onEngineExit((code) => {
   $('setup').classList.remove('hidden')
   $('chat').classList.add('hidden')
   $('btn-start').disabled = false
-  $('btn-start').textContent = '重新启动'
+  $('btn-start').textContent = window.I18N ? I18N.tx('重新启动') : '重新启动'
 })
 
 $('btn-start').onclick = start
@@ -535,7 +537,7 @@ $('btn-restart').onclick = async () => {
   await window.api.stopEngine()
   $('chat').classList.add('hidden')
   $('setup').classList.remove('hidden')
-  $('btn-start').textContent = '重新启动'
+  $('btn-start').textContent = window.I18N ? I18N.tx('重新启动') : '重新启动'
   updateStart()
 }
 
@@ -552,3 +554,9 @@ $('input').addEventListener('keydown', (e) => {
 })
 
 boot()
+
+document.addEventListener('langchange', () => {
+  try { renderEngine() } catch (e) {}
+  try { renderModels() } catch (e) {}
+  try { updateStart() } catch (e) {}
+})

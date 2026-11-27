@@ -10,12 +10,12 @@
   var endpoint = null
 
   var CATALOG = [
-    { id: 'low-en', tier: '低配', name: 'TinyLlama-1.1B-Chat', file: 'tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf', size: 669 * 1024 * 1024, sizeLabel: '669MB', ram: '0.8~1.0GB', note: '英文低配，中文基本别指望', ctx: 512 },
-    { id: 'vision-cn', tier: '识图', name: 'Qwen2.5-VL-3B-Instruct', file: 'Qwen2.5-VL-3B-Instruct-Q4_K_M.gguf', size: 1929 * 1024 * 1024, sizeLabel: '1.9GB', ram: '3~4GB', note: '能看图：把截图丢给它，它描述画面里的内容', mmproj: { file: 'mmproj-Qwen2.5-VL-3B-Instruct-Q8_0.gguf', size: 427 * 1024 * 1024 }, ctx: 4096 },
-    { id: 'mid-en', tier: '中配', name: 'Llama-3.2-1B-Instruct', file: 'Llama-3.2-1B-Instruct-Q4_K_M.gguf', size: 808 * 1024 * 1024, sizeLabel: '808MB', ram: '0.8~1.0GB', note: '英文对话质量好，中文弱', ctx: 1024 },
-    { id: 'mid-cn', tier: '中配', name: 'Qwen2.5-1.5B-Instruct', file: 'qwen2.5-1.5b-instruct-q4_k_m.gguf', size: 1.12 * 1024 * 1024 * 1024, sizeLabel: '1.12GB', ram: '1.2~1.5GB', note: '主流手机 / 轻薄本，速度 9~14 t/s', ctx: 1024 },
-    { id: 'high-cn', tier: '高配', name: 'Qwen2.5-3B-Instruct', file: 'Qwen2.5-3B-Instruct-Q4_K_M.gguf', size: 1929903264, sizeLabel: '1.80GB', ram: '2.2~2.6GB', note: '推荐起点，守得住 CMD:/TEXT: 协议', ctx: 2048 },
-    { id: 'high-en', tier: '高配', name: 'Llama-3.2-3B-Instruct', file: 'Llama-3.2-3B-Instruct-Q4_K_M.gguf', size: 2.02 * 1024 * 1024 * 1024, sizeLabel: '2.02GB', ram: '2.2~2.6GB', note: '英文高配，中文一般', ctx: 2048 }
+    { id: 'low-en', tier: '低配', tierEn: 'Low', name: 'TinyLlama-1.1B-Chat', file: 'tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf', size: 669 * 1024 * 1024, sizeLabel: '669MB', ram: '0.8~1.0GB', note: '英文低配，中文基本别指望', noteEn: 'Tiny and English-only — do not expect usable Chinese', ctx: 512 },
+    { id: 'vision-cn', tier: '识图', tierEn: 'Vision', name: 'Qwen2.5-VL-3B-Instruct', file: 'Qwen2.5-VL-3B-Instruct-Q4_K_M.gguf', size: 1929 * 1024 * 1024, sizeLabel: '1.9GB', ram: '3~4GB', note: '能看图：把截图丢给它，它描述画面里的内容', noteEn: 'Sees images — drop in a screenshot and it describes what is there', mmproj: { file: 'mmproj-Qwen2.5-VL-3B-Instruct-Q8_0.gguf', size: 427 * 1024 * 1024 }, ctx: 4096 },
+    { id: 'mid-en', tier: '中配', tierEn: 'Mid', name: 'Llama-3.2-1B-Instruct', file: 'Llama-3.2-1B-Instruct-Q4_K_M.gguf', size: 808 * 1024 * 1024, sizeLabel: '808MB', ram: '0.8~1.0GB', note: '英文对话质量好，中文弱', noteEn: 'Good English chat, weak Chinese', ctx: 1024 },
+    { id: 'mid-cn', tier: '中配', tierEn: 'Mid', name: 'Qwen2.5-1.5B-Instruct', file: 'qwen2.5-1.5b-instruct-q4_k_m.gguf', size: 1.12 * 1024 * 1024 * 1024, sizeLabel: '1.12GB', ram: '1.2~1.5GB', note: '主流手机 / 轻薄本，速度 9~14 t/s', noteEn: 'Mainstream phones and thin laptops, 9–14 t/s', ctx: 1024 },
+    { id: 'high-cn', tier: '高配', tierEn: 'High', name: 'Qwen2.5-3B-Instruct', file: 'Qwen2.5-3B-Instruct-Q4_K_M.gguf', size: 1929903264, sizeLabel: '1.80GB', ram: '2.2~2.6GB', note: '推荐起点，守得住 CMD:/TEXT: 协议', noteEn: 'Recommended starting point, keeps the CMD:/TEXT: protocol in line', ctx: 2048 },
+    { id: 'high-en', tier: '高配', tierEn: 'High', name: 'Llama-3.2-3B-Instruct', file: 'Llama-3.2-3B-Instruct-Q4_K_M.gguf', size: 2.02 * 1024 * 1024 * 1024, sizeLabel: '2.02GB', ram: '2.2~2.6GB', note: '英文高配，中文一般', noteEn: 'High-end English model, so-so Chinese', ctx: 2048 }
   ]
 
   function timeout(ms) {

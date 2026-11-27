@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: file:; style-src 'self' 'unsafe-inline'">
 <title>Termux AI Harness</title>
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=1.4.3">
 </head>
 <body>
 
@@ -16,49 +16,50 @@
   </div>
   <div class="status">
     <span class="dot" id="dot"></span>
-    <span id="status-text">正在检测环境…</span>
+    <span id="status-text" data-i18n="status.checking">正在检测环境…</span>
   </div>
+  <button class="btn tiny ghost lang-btn" id="btn-lang" type="button">EN</button>
 </header>
 
 <main id="setup" class="view">
   <div class="intro">
-    <h1>本地 AI，开机即用</h1>
-    <p>自动找模型、自动起服务、自动进聊天。全程 <code>127.0.0.1</code>，不联网就不花钱。</p>
+    <h1 data-i18n="intro.title">本地 AI，开机即用</h1>
+    <p data-i18n="intro.desc" data-i18n-html>自动找模型、自动起服务、自动进聊天。全程 <code>127.0.0.1</code>，不联网就不花钱。</p>
   </div>
 
   <section id="engine-block" class="block">
     <div class="block-head">
       <span class="step">1</span>
-      <h2>推理引擎</h2>
-      <span class="badge" id="engine-badge">检测中</span>
+      <h2 data-i18n="step.engine">推理引擎</h2>
+      <span class="badge" id="engine-badge" data-i18n="badge.detecting">检测中</span>
     </div>
     <p class="hint" id="engine-hint"></p>
     <div class="row">
-      <button class="btn ghost" id="btn-pick-engine">手动指定 llama-server</button>
-      <button class="btn ghost" id="btn-open-llama">去下载 llama.cpp</button>
+      <button class="btn ghost" id="btn-pick-engine" data-i18n="btn.pickEngine">手动指定 llama-server</button>
+      <button class="btn ghost" id="btn-open-llama" data-i18n="btn.getLlama">去下载 llama.cpp</button>
     </div>
   </section>
 
   <section id="model-block" class="block">
     <div class="block-head">
       <span class="step">2</span>
-      <h2>模型</h2>
-      <span class="badge" id="model-badge">扫描中</span>
+      <h2 data-i18n="step.model">模型</h2>
+      <span class="badge" id="model-badge" data-i18n="badge.scanning">扫描中</span>
     </div>
     <p class="hint" id="model-hint"></p>
     <div id="model-list" class="models"></div>
     <div class="row">
-      <button class="btn ghost" id="btn-add-model">选择本地 GGUF</button>
+      <button class="btn ghost" id="btn-add-model" data-i18n="btn.addModel">选择本地 GGUF</button>
     </div>
   </section>
 
   <section class="block">
     <div class="block-head">
       <span class="step">3</span>
-      <h2>启动</h2>
+      <h2 data-i18n="step.start">启动</h2>
     </div>
     <div class="launch-row">
-      <button class="btn primary" id="btn-start" disabled>启动并进入聊天</button>
+      <button class="btn primary" id="btn-start" disabled data-i18n="btn.start">启动并进入聊天</button>
       <span class="launch-note" id="launch-note"></span>
     </div>
     <div id="engine-log" class="log"></div>
@@ -71,22 +72,23 @@
     <span class="sep">·</span>
     <span id="chat-endpoint" class="mono"></span>
     <span class="spacer"></span>
-    <button class="btn tiny ghost" id="btn-open-site">官网</button>
-    <button class="btn tiny ghost" id="btn-restart">重启服务</button>
+    <button class="btn tiny ghost" id="btn-open-site" data-i18n="chat.site">官网</button>
+    <button class="btn tiny ghost" id="btn-restart" data-i18n="chat.restart">重启服务</button>
   </div>
   <div id="messages" class="messages"></div>
   <form id="composer" class="composer">
-    <button type="button" class="btn tiny ghost" id="btn-img" title="发一张图片给模型看">图片</button>
+    <button type="button" class="btn tiny ghost" id="btn-img" data-i18n="btn.img" data-i18n-title="btn.img.title" title="发一张图片给模型看">图片</button>
     <input type="file" id="img-file" accept="image/*" hidden />
-    <textarea id="input" rows="1" placeholder="问点什么，或让它干点什么…（可直接粘贴图片）"></textarea>
-    <label class="toggle" id="btn-web" title="先用 DuckDuckGo / 维基百科 搜一遍，再把结果喂给模型">
+    <textarea id="input" rows="1" data-i18n-placeholder="input.placeholder" placeholder="问点什么，或让它干点什么…（可直接粘贴图片）"></textarea>
+    <label class="toggle" id="btn-web" data-i18n-title="btn.web.title" title="先用 DuckDuckGo / 维基百科 搜一遍，再把结果喂给模型">
       <input type="checkbox" id="web-on" />
-      <span>联网</span>
+      <span data-i18n="toggle.web">联网</span>
     </label>
-    <button class="btn primary" id="btn-send" type="submit">发送</button>
+    <button class="btn primary" id="btn-send" type="submit" data-i18n="btn.send">发送</button>
   </form>
 </main>
 
-<script src="app.js"></script>
+<script src="i18n.js?v=1.4.3"></script>
+<script src="app.js?v=1.4.3"></script>
 </body>
 </html>
