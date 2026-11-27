@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>手册 · Termux AI Harness</title>
+<meta name="description" content="Termux AI Harness 中文手册：从零安装到性能调优，20 页。">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#9632;</text></svg>">
+<style>
+  :root{
+    --bg:#07080c; --surface:#0e1016; --surface-2:#14171f; --line:#1e2330;
+    --text:#e6e9ef; --muted:#8b94a7; --accent:#00e5a0; --blue:#5b9dff;
+    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth;width:100%;max-width:100%}
+  body{
+    margin:0; overflow-x:hidden; width:100%; max-width:100%; background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    line-height:1.75; font-size:15px; -webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--blue);text-decoration:none}
+  a:hover{text-decoration:underline}
+
+  /* 顶部 */
+  header{
+    position:sticky;top:0;z-index:60;backdrop-filter:blur(14px);
+    background:rgba(7,8,12,.82);border-bottom:1px solid var(--line);
+  }
+  .hbar{max-width:1180px;margin:0 auto;padding:12px 22px;display:flex;align-items:center;gap:14px}
+  .brand{display:flex;align-items:center;gap:9px;font-weight:700;font-size:15px;color:var(--text);text-decoration:none}
+  .mark{width:24px;height:24px;border:1px solid var(--accent);border-radius:6px;display:grid;place-items:center;
+        font-family:var(--mono);font-size:12px;color:var(--accent);box-shadow:0 0 16px rgba(0,229,160,.22)}
+  .hbar .sep{color:var(--line)}
+  .hbar .sub{color:var(--muted);font-size:13px}
+  .hbar .right{margin-left:auto;display:flex;align-items:center;gap:16px;font-size:13px}
+  .hbar .right a{color:var(--muted)}
+  .hbar .right a:hover{color:var(--accent)}
+  #pager{font-family:var(--mono);color:var(--accent);font-size:13px;white-space:nowrap}
+  .progress{height:2px;background:transparent}
+  .progress > i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--blue));transition:width .25s}
+
+  /* 布局 */
+  .wrap{max-width:1180px;width:100%;margin:0 auto;padding:26px 22px 90px;display:grid;grid-template-columns:246px minmax(0,1fr);gap:38px}
+
+  /* 侧栏 */
+  aside{position:sticky;top:64px;align-self:start;max-height:calc(100vh - 90px);overflow:auto;padding-right:6px}
+  aside::-webkit-scrollbar{width:6px}
+  aside::-webkit-scrollbar-thumb{background:var(--line);border-radius:3px}
+  .search{
+    width:100%;background:var(--surface);border:1px solid var(--line);border-radius:8px;
+    color:var(--text);padding:9px 11px;font-size:13px;font-family:inherit;outline:none;margin-bottom:14px;
+  }
+  .search:focus{border-color:var(--accent)}
+  .toc{list-style:none;margin:0;padding:0;font-size:13.5px}
+  .toc li{margin:1px 0}
+  .toc a{
+    display:flex;gap:9px;align-items:baseline;color:var(--muted);padding:6px 9px;border-radius:7px;
+    text-decoration:none;transition:background .15s,color .15s;
+  }
+  .toc a:hover{background:var(--surface);color:var(--text)}
+  .toc a.on{background:var(--surface-2);color:var(--accent)}
+  .toc .n{font-family:var(--mono);font-size:11px;color:#5c6474;min-width:18px}
+  .toc a.on .n{color:var(--accent)}
+
+  /* 正文 */
+  main{min-width:0}
+  .page{display:none;animation:fade .25s ease}
+  .page.on{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+  .kicker{font-family:var(--mono);font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin-bottom:8px}
+  h1{overflow-wrap:anywhere;font-size:28px;line-height:1.3;letter-spacing:-.02em;margin:0 0 14px}
+  h2{font-size:18px;margin:30px 0 10px;letter-spacing:-.01em}
+  h3{font-size:15.5px;margin:22px 0 8px;color:#cfd5e2}
+  p{margin:0 0 14px;color:#c6ccda;overflow-wrap:anywhere}
+  ul,ol{margin:0 0 16px;padding-left:20px;color:#c6ccda}
+  li{margin:5px 0}
+  code{font-family:var(--mono);font-size:12.8px;background:var(--surface-2);border:1px solid var(--line);
+       border-radius:5px;padding:1px 5px;color:#9ef0cd}
+  pre{
+    position:relative;background:var(--surface);border:1px solid var(--line);border-radius:10px;
+    padding:14px 15px;overflow:auto;margin:0 0 16px;font-family:var(--mono);font-size:12.8px;line-height:1.65;color:#d7dde9;
+  }
+  pre code{background:none;border:0;padding:0;color:inherit;font-size:inherit}
+  .copy{
+    position:absolute;top:8px;right:8px;background:var(--surface-2);border:1px solid var(--line);border-radius:6px;
+    color:var(--muted);font-size:11px;padding:3px 8px;cursor:pointer;font-family:var(--mono);
+  }
+  .copy:hover{color:var(--accent);border-color:var(--accent)}
+  .note{border-left:2px solid var(--accent);background:rgba(0,229,160,.06);padding:11px 14px;border-radius:0 8px 8px 0;margin:0 0 16px;color:#cfd5e2;font-size:14px}
+  .warn{border-left:2px solid #ff9f43;background:rgba(255,159,67,.07);padding:11px 14px;border-radius:0 8px 8px 0;margin:0 0 16px;color:#ecd9c2;font-size:14px}
+  table{width:100%;border-collapse:collapse;margin:0 0 18px;font-size:13.5px}
+  th,td{border:1px solid var(--line);padding:9px 11px;text-align:left}
+  th{background:var(--surface);color:#aeb6c6;font-weight:600}
+  td{color:#c6ccda}
+  tr:nth-child(2n) td{background:rgba(20,23,31,.4)}
+
+  /* 底部翻页 */
+  .pager{display:flex;align-items:center;gap:12px;margin-top:38px;padding-top:20px;border-top:1px solid var(--line)}
+  .pager button{
+    background:var(--surface);border:1px solid var(--line);border-radius:9px;color:var(--text);
+    padding:9px 16px;font-size:13.5px;cursor:pointer;font-family:inherit;transition:.15s;
+  }
+  .pager button:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
+  .pager button:disabled{opacity:.35;cursor:not-allowed}
+  .pager .mid{margin-left:auto;margin-right:auto;color:var(--muted);font-size:12.5px;font-family:var(--mono)}
+  .foot{margin-top:44px;padding-top:18px;border-top:1px solid var(--line);color:#5f6878;font-size:12.5px;display:flex;gap:14px;flex-wrap:wrap}
+  .foot a{color:#7d8798}
+
+  @media (max-width:860px){
+    .hbar{flex-wrap:wrap;padding:10px 14px;gap:8px}
+    .hbar .sub{display:none}
+    .hbar .right{gap:12px;font-size:12px;margin-left:auto}
+    .hbar .right a:nth-child(2){display:none}   /* 备用站 */
+    #pager{font-size:12px}
+    .wrap{display:block;padding:16px 14px 70px}
+    aside{position:static;max-height:none;margin-top:30px;border-top:1px solid var(--line);padding-top:16px}
+    main{min-width:0}
+    h1{font-size:22px}
+    h2{font-size:16.5px}
+    pre{font-size:12px;padding:12px 12px}
+    pre code{font-size:12px}
+    .pager button{padding:8px 12px;font-size:12.5px}
+    .toc{display:grid;grid-template-columns:1fr 1fr;gap:0 8px}
+    .toc a{padding:6px;font-size:12.5px}
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="hbar">
+    <a class="brand" href="../"><span class="mark">■</span>Termux AI Harness</a>
+    <span class="sep">/</span>
+    <span class="sub">中文手册</span>
+    <span class="right">
+      <span id="pager">01 / 20</span>
+      <a href="../">官网</a>
+      <a href="../backup/">备用站</a>
+      <a href="https://github.com/Huangqia123/termux-ai-harness" target="_blank" rel="noopener">GitHub</a>
+    </span>
+  </div>
+  <div class="progress"><i id="bar"></i></div>
+</header>
+
+<div class="wrap">
+  <aside>
+    <input class="search" id="search" type="search" placeholder="搜索章节…">
+    <ul class="toc" id="toc"></ul>
+  </aside>
+
+  <main id="main">
+
+    <!-- 01 -->
+    <section class="page" data-title="这是什么">
+      <div class="kicker">01 · 开始之前</div>
+      <h1>把任何一台机器变成离线 AI 终端</h1>
+      <p>Termux AI Harness 是两件事合在一起：一个跑在本机的 <code>llama.cpp</code> 推理服务，加上一个会说人话、也能替你敲命令的终端客户端。</p>
+      <h2>它做了什么</h2>
+      <ul>
+        <li>全链路走 <code>127.0.0.1</code>，不联网也能用，不要 API Key，没有额度限制。</li>
+        <li>自动找 <code>llama-server</code>、自动扫 GGUF 模型、一键下载、启动后直接进聊天。</li>
+        <li>聊天里带网址，它会真的打开网页取正文并截图，再把内容交给模型。</li>
+        <li>回答分成 <code>TEXT:</code> 和 <code>CMD:</code>：说话归说话，命令先打印、按 <code>y</code> 才执行。</li>
+        <li>桌面端覆盖 Windows / macOS（Intel + Apple 芯片）/ Linux，Android 走 Termux。</li>
+      </ul>
+      <h2>它不做什么</h2>
+      <p>它不是云服务，不替你保存对话，也不保证命令安全——危险命令有黑名单，但那是模式匹配，不是沙箱。这台机器上真正执行命令的人还是你。</p>
+      <div class="note">许可：MIT。模型许可见 <code>THIRD-PARTY-NOTICES.md</code>，Qwen 是 Apache-2.0，Llama 3.2 是社区许可。</div>
+    </section>
+
+    <!-- 02 -->
+    <section class="page" data-title="环境要求">
+      <div class="kicker">02 · 开始之前</div>
+      <h1>你需要一台什么样的机器</h1>
+      <h2>系统</h2>
+      <table>
+        <tr><th>平台</th><th>方式</th><th>依赖</th></tr>
+        <tr><td>Android</td><td>Termux（F-Droid 版）</td><td>curl、jq，脚本自动装</td></tr>
+        <tr><td>Linux</td><td>bash 脚本</td><td>curl、jq</td></tr>
+        <tr><td>macOS</td><td>bash 脚本</td><td>curl、jq（brew 装）</td></tr>
+        <tr><td>Windows</td><td>PowerShell 脚本</td><td>无，系统自带</td></tr>
+      </table>
+      <h2>内存与机型</h2>
+      <ul>
+        <li>4GB 内存级：跑 0.5B / 1.1B，<code>-c 512</code>。</li>
+        <li>6~8GB：跑 1.5B / Llama-3.2-1B，<code>-c 1024</code>。</li>
+        <li>8GB 以上：跑 3B，<code>-c 2048</code>，这是推荐起点。</li>
+      </ul>
+      <div class="warn"><strong>留一半内存给系统。</strong>Android 的内存回收很凶，<code>llama-server</code> 常驻超过可用内存的一半，很容易被系统直接杀掉，表现为“聊两句就断”。</div>
+      <h2>暂不支持</h2>
+      <p>纯血鸿蒙（HarmonyOS NEXT）没有可用的 POSIX shell，装不了 llama.cpp；iOS / iPadOS 沙箱不允许 fork/exec 外部二进制。这两项不是待办，是环境本身不满足。</p>
+    </section>
+
+    <!-- 03 -->
+    <section class="page" data-title="下载与校验">
+      <div class="kicker">03 · 安装</div>
+      <h1>拿到安装包，并确认它没坏</h1>
+      <p>官网首页的下载区会实时从 GitHub Releases 拉版本号和文件名，点平台名直接开始下载，默认走国内加速节点，文件与 GitHub 原包逐字节一致。</p>
+      <h2>从命令行取</h2>
+<pre><code># 以 v1.4.0 为例，换成 latest 可自动取最新
+curl -L -O https://github.com/Huangqia123/termux-ai-harness/releases/download/v1.4.0/TermuxAIHarness-1.4.0-android.apk
+curl -L -O https://github.com/Huangqia123/termux-ai-harness/releases/download/v1.4.0/SHA256SUMS-1.4.0.txt</code></pre>
+      <h2>校验</h2>
+<pre><code>sha256sum -c SHA256SUMS-1.4.0.txt</code></pre>
+      <p>看到每行 <code>OK</code> 就说明文件完整。加速节点偶尔抽风时不一定是文件坏，也可以点每张下载卡下面的「GitHub 原链」重下一次。</p>
+      <div class="note">如果你是直接克隆仓库用脚本（不装 GUI），这一步可以跳过——脚本就在仓库 <code>bin/</code> 和 <code>install.sh</code> 里。</div>
+    </section>
+
+    <!-- 04 -->
+    <section class="page" data-title="Termux 安装">
+      <div class="kicker">04 · 安装</div>
+      <h1>在 Termux 里装好两个命令</h1>
+      <h2>先更新源</h2>
+<pre><code>pkg update &amp;&amp; pkg upgrade -y
+pkg install -y git curl jq</code></pre>
+      <h2>拉仓库并安装</h2>
+<pre><code>git clone https://github.com/Huangqia123/termux-ai-harness.git
+cd termux-ai-harness
+bash install.sh</code></pre>
+      <p>脚本会自动检测平台，在 Termux 上装到 <code>$PREFIX/bin</code>，依赖缺失时用 <code>pkg</code> 补。装完你会得到两个命令：</p>
+      <ul>
+        <li><code>termuxai</code> —— 只会聊天的客户端，不会执行任何命令。</li>
+        <li><code>termuxai-harness</code> —— 带命令执行能力的 agent，危险命令会被拦。</li>
+      </ul>
+      <h2>Android 还有一种用法</h2>
+      <p>直接装 <code>TermuxAIHarness-*.apk</code>，那是一个前端外壳，不内置模型，仍然是连你 Termux 里跑着的引擎。所以 <strong>APK 和 Termux 两样都得有</strong>。</p>
+    </section>
+
+    <!-- 05 -->
+    <section class="page" data-title="第一次跑起来">
+      <div class="kicker">05 · 安装</div>
+      <h1>三步，五分钟</h1>
+      <p>顺序别反：先起模型服务，再启动客户端。客户端一连不上就会报“connection refused”，那不是装错了，是引擎还没起来。</p>
+      <h2>第一步：起 llama-server</h2>
+<pre><code>llama-server -m qwen2.5-1.5b-instruct-q4_k_m.gguf -c 1024 --port 8080 -t 6</code></pre>
+      <p>看到 <code>HTTP server listening</code> 之类的行就算起来了。这个终端不要关，它是引擎。</p>
+      <h2>第二步：另开一个终端</h2>
+<pre><code>termuxai-harness</code></pre>
+      <h2>第三步：说话</h2>
+      <p>直接输入自然语言。想让它干活就说得具体一点：“看看当前目录里最大的文件”，它会把命令打印出来，等你按 <code>y</code>。</p>
+      <div class="note">端口 8080 被占用时，桌面端会自动退到 8081–8091；手动起服务时自己挑一个空端口，再把 <code>TERMUX_AI_URL</code> 指过去。</div>
+    </section>
+
+    <!-- 06 -->
+    <section class="page" data-title="模型怎么选">
+      <div class="kicker">06 · 模型</div>
+      <h1>六个模型，按内存分三档</h1>
+      <p>全部 Q4_K_M 量化，配默认参数开箱即用。每档都是一个中文、一个英文。</p>
+      <table>
+        <tr><th>档位</th><th>适用设备</th><th>中文</th><th>英文</th><th>建议 -c</th></tr>
+        <tr><td>低配</td><td>4GB 级</td><td>Qwen2.5-0.5B</td><td>TinyLlama-1.1B</td><td>512</td></tr>
+        <tr><td>中配</td><td>6~8GB 级</td><td>Qwen2.5-1.5B</td><td>Llama-3.2-1B</td><td>1024</td></tr>
+        <tr><td>高配</td><td>8GB 以上</td><td>Qwen2.5-3B</td><td>Llama-3.2-3B</td><td>2048</td></tr>
+      </table>
+      <h2>为什么中文用 Qwen、英文用 Llama</h2>
+      <p>Qwen2.5 的中文语料占比高，指令跟随和中文输出稳定性明显好于同尺寸英文模型；英文侧 Llama-3.2 的对话质量和理解更好。</p>
+      <h2>3B 的真正价值不在速度</h2>
+      <p>荣耀平板 X9 上实测：3B 常规 9–15 token/s，短提示命中缓存最高 46 token/s；同机换 1.5B 是 9–14 token/s，差得不多。<strong>拉开差距的是它守得住 <code>CMD:</code> / <code>TEXT:</code> 协议</strong>——1.5B 经常忘记前缀，harness 就会误判。</p>
+    </section>
+
+    <!-- 07 -->
+    <section class="page" data-title="手动下模型">
+      <div class="kicker">07 · 模型</div>
+      <h1>不想用图形界面，就自己拉</h1>
+      <p>仓库自带 <code>download-models.sh</code>，默认走 <code>hf-mirror.com</code>，国内比直连 huggingface.co 稳。</p>
+<pre><code>chmod +x download-models.sh
+./download-models.sh low-cn     # 低配中文
+./download-models.sh mid-cn     # 中配中文
+./download-models.sh high-cn    # 高配中文
+./download-models.sh low-en mid-en high-en</code></pre>
+      <h2>放哪儿</h2>
+      <p>放进仓库的 <code>models/</code> 目录，或者任何你顺手的位置，起服务时用绝对路径指过去就行。几百 MB 到几 GB 的二进制不进 git，<code>.gitignore</code> 里已经排除了。</p>
+      <h2>下完先看一眼大小</h2>
+      <table>
+        <tr><th>模型</th><th>体积</th><th>常驻内存估算</th></tr>
+        <tr><td>0.5B</td><td>约 491MB</td><td>0.4~0.6GB</td></tr>
+        <tr><td>1.5B</td><td>约 1.12GB</td><td>1.2~1.5GB</td></tr>
+        <tr><td>3B</td><td>约 1.8GB</td><td>2.2~2.6GB</td></tr>
+      </table>
+      <div class="warn">Q4_K_M 大致是每 10 亿参数 0.6~0.7GB 常驻，再加 KV cache。别只看模型文件大小，要留出上下文占的那部分。</div>
+    </section>
+
+    <!-- 08 -->
+    <section class="page" data-title="服务端参数">
+      <div class="kicker">08 · 模型</div>
+      <h1>llama-server 这几个参数决定手感</h1>
+      <h3>-m</h3><p>模型文件路径。只有一个模型时可以省略，harness 会自己扫。</p>
+      <h3>-c</h3><p>上下文长度。它和速度、内存是三角关系：<code>-c</code> 越大越吃内存、越慢。低配 512，中配 1024，高配 2048 就够，别盲目上 4096。</p>
+      <h3>-t</h3><p>线程数。按设备<strong>大核</strong>数量设，超了反而变慢，因为小核拖后腿。<code>-t 4</code> 在多数中端机上就是甜点。</p>
+      <h3>--port</h3><p>默认 8080。改端口后记得同步 <code>TERMUX_AI_URL</code>。</p>
+      <h2>显存 / 内存不够的先降哪个</h2>
+      <ol>
+        <li>先降 <code>-c</code>，它对内存的影响最直接。</li>
+        <li>再换小一档模型。</li>
+        <li>最后才动线程数——线程降了是实打实变慢。</li>
+      </ol>
+      <div class="note">出现 <code>failed to allocate</code> 或进程被系统杀掉，基本都是这一条路径走下来的问题，不是装错了。</div>
+    </section>
+
+    <!-- 09 -->
+    <section class="page" data-title="TEXT 与 CMD">
+      <div class="kicker">09 · 使用</div>
+      <h1>它怎么区分“说话”和“动手”</h1>
+      <p>模型的回复必须以两个前缀之一开头：</p>
+      <ul>
+        <li><code>TEXT:</code> —— 当回答打印，永远不进 shell。</li>
+        <li><code>CMD:</code> —— 先展示命令，等你按 <code>y</code> 才执行。</li>
+      </ul>
+      <p>模型忘了写前缀时，客户端会按“形状”兜底判断：看着像命令的那一行，宁可当话处理，也不会把一句话当命令跑掉。</p>
+      <h2>确认流程长这样</h2>
+<pre><code>[CMD] du -sh * | sort -h | tail -5
+run? [y/N] _</code></pre>
+      <p>按 <code>n</code> 或直接回车都等于取消。执行完的输出会回灌给模型，让它接着往下说。</p>
+      <h2>两个命令的区别</h2>
+      <p><code>termuxai</code> 只会聊天，没有 CMD 能力；<code>termuxai-harness</code> 才有执行链。想纯聊天、怕手滑，就用前者。</p>
+    </section>
+
+    <!-- 10 -->
+    <section class="page" data-title="命令确认与拦截">
+      <div class="kicker">10 · 使用</div>
+      <h1>人在回路，但别把它当保险箱</h1>
+      <p>每条命令都会先打印，默认要按 <code>y</code> 确认。递归删除、磁盘格式化、关机重启、fork bomb 这类直接拒绝，连确认机会都不给。</p>
+      <h2>黑名单大致覆盖</h2>
+      <ul>
+        <li><code>rm -rf /</code> 一类递归删除、通配删除</li>
+        <li><code>mkfs</code>、<code>dd</code> 覆写磁盘、<code>format</code></li>
+        <li><code>shutdown</code>、<code>reboot</code>、<code>halt</code></li>
+        <li>fork bomb 形状的递归调用</li>
+      </ul>
+      <div class="warn"><strong>这是模式匹配，不是沙箱。</strong>换个写法的破坏性命令仍可能绕过去。它挡的是手滑和模型犯傻，不是恶意构造。执行前自己扫一眼那行命令。</div>
+      <h2>不想每次按 y？</h2>
+      <p><code>TERMUX_AI_AUTO_RETRY=1</code> 会跳过确认。别在你不看着屏幕的时候开这个。</p>
+    </section>
+
+    <!-- 11 -->
+    <section class="page" data-title="失败回灌与重试">
+      <div class="kicker">11 · 使用</div>
+      <h1>命令报错了，它会自己改</h1>
+      <p>命令失败时，客户端把<strong>命令原文和输出</strong>一起交回模型，让它给出修正版本，最多重试 <code>TERMUX_AI_MAX_RETRY</code> 次（默认 2）。</p>
+<pre><code>export TERMUX_AI_MAX_RETRY=1   # 保守：只给一次改的机会</code></pre>
+      <h2>为什么要有上限</h2>
+      <p>没有上限的话，模型会在同一个错误上反复绕圈，既费时间又费电。两次已经是“明显是我写错了”的量级，再多基本说明信息不够，该你自己补。</p>
+      <div class="note">重试仍然逐条确认，不会因为“在重试”就静默执行。</div>
+    </section>
+
+    <!-- 12 -->
+    <section class="page" data-title="环境变量速查">
+      <div class="kicker">12 · 使用</div>
+      <h1>所有可调项都在这里</h1>
+      <table>
+        <tr><th>变量</th><th>默认</th><th>说明</th></tr>
+        <tr><td><code>TERMUX_AI_URL</code></td><td>http://127.0.0.1:8080/v1/chat/completions</td><td>推理接口地址</td></tr>
+        <tr><td><code>TERMUX_AI_MODEL</code></td><td>空</td><td>模型名，OpenAI 兼容后端用得上</td></tr>
+        <tr><td><code>TERMUX_AI_TEMPERATURE</code></td><td>0.2 / 0.1</td><td>采样温度，越高越发散</td></tr>
+        <tr><td><code>TERMUX_AI_MAX_TOKENS</code></td><td>512 / 256</td><td>单次输出上限</td></tr>
+        <tr><td><code>TERMUX_AI_TIMEOUT</code></td><td>120</td><td>超时秒数</td></tr>
+        <tr><td><code>TERMUX_AI_AUTO_RETRY</code></td><td>0</td><td>仅 harness，1 跳过确认</td></tr>
+        <tr><td><code>TERMUX_AI_MAX_RETRY</code></td><td>2</td><td>仅 harness，失败重试上限</td></tr>
+      </table>
+      <h2>怎么设</h2>
+<pre><code># bash / Termux
+export TERMUX_AI_URL=http://127.0.0.1:8080/v1/chat/completions
+
+# PowerShell
+$env:TERMUX_AI_URL = "http://127.0.0.1:8080/v1/chat/completions"</code></pre>
+      <p>想长期生效，bash 写进 <code>~/.bashrc</code> 或 <code>~/.zshrc</code>；PowerShell 用 <code>[Environment]::SetEnvironmentVariable</code> 写用户级变量。</p>
+    </section>
+
+    <!-- 13 -->
+    <section class="page" data-title="让它读网页">
+      <div class="kicker">13 · 进阶</div>
+      <h1>聊天里贴网址，它会真的打开</h1>
+      <p>桌面端用一个离屏窗口加载目标网址，执行脚本取 <code>document.body.innerText</code>，再用 <code>capturePage()</code> 截首屏存到 <code>userData/shots/</code>。</p>
+      <ul>
+        <li>拿到的是 <strong>JS 渲染后的正文</strong>，不是 <code>curl</code> 那层原始 HTML。</li>
+        <li>正文按上下文预算截断，超出的部分丢掉——所以问得越具体，答得越准。</li>
+        <li>截图会随对话一起给模型，配合视觉模型能看版面。</li>
+      </ul>
+      <div class="note">整条链路不依赖外部 API，网页内容也不会被上传到任何地方。</div>
+      <h2>什么时候会翻车</h2>
+      <p>需要登录的页面、纯 Canvas 渲染的页面、反爬很凶的站点，取到的正文可能只有一句“请开启 JavaScript”。这时候换用截图理解，或者自己把关键段落贴进来。</p>
+    </section>
+
+    <!-- 14 -->
+    <section class="page" data-title="图片与视觉">
+      <div class="kicker">14 · 进阶</div>
+      <h1>给它看图</h1>
+      <p>点输入框旁边的「图片」按钮，或者直接 <code>Ctrl+V</code> 粘贴截图，图片会和文字一起交给模型。</p>
+      <h2>用对模型</h2>
+      <p>普通 Qwen2.5 文本模型看不了图，需要换成视觉模型（Qwen2.5-VL 系列）。模型目录里可以放多个，起服务时指哪个用哪个。</p>
+      <h2>能做什么</h2>
+      <ul>
+        <li>描述画面、识别界面元素、读表格截图</li>
+        <li>看报错截图并指出问题行</li>
+        <li>配合网页截图理解整页排版</li>
+      </ul>
+      <div class="warn">图片走 <code>data:</code> 内联，占上下文很快。一张长截图可能吃掉几百 token，问的时候别一次贴十张。</div>
+    </section>
+
+    <!-- 15 -->
+    <section class="page" data-title="Windows 安装">
+      <div class="kicker">15 · 桌面端</div>
+      <h1>Windows：一套 PowerShell 实现</h1>
+      <p>不是 bash 套壳。用 PowerShell 原生能力替代 <code>curl</code> 和 <code>jq</code>，不需要 Git Bash 或 WSL。</p>
+      <h2>确认版本</h2>
+<pre><code>$PSVersionTable.PSVersion</code></pre>
+      <p>5.1 是 Win10/11 自带，够用；7.x 更好，去 <code>aka.ms/powershell</code> 装。</p>
+      <h2>安装</h2>
+<pre><code>powershell -ExecutionPolicy Bypass -File windows\install.ps1</code></pre>
+      <p>脚本做三件事：把两个 <code>.ps1</code> 复制到 <code>%LOCALAPPDATA%\TermuxAI\bin</code>；生成同名 <code>.cmd</code> 启动器（内部自带 Bypass）；把这个目录加到<strong>用户级</strong> PATH，不碰系统 PATH，不要管理员权限。</p>
+      <h2>跑</h2>
+<pre><code>llama-server.exe -m model.gguf -c 1024 --port 8080
+termuxai-harness</code></pre>
+      <div class="note">GUI 版是 zip，解压双击 exe。没有签名，SmartScreen 会拦一次：更多信息 → 仍要运行。</div>
+    </section>
+
+    <!-- 16 -->
+    <section class="page" data-title="Linux 与 macOS">
+      <div class="kicker">16 · 桌面端</div>
+      <h1>Linux / macOS：一条 install.sh 通吃</h1>
+<pre><code># Debian / Ubuntu
+sudo apt install curl jq
+# Fedora
+sudo dnf install curl jq
+# Arch
+sudo pacman -S curl jq
+# macOS
+brew install curl jq</code></pre>
+<pre><code>bash install.sh              # 装到 ~/.local/bin，不需要 root
+bash install.sh --system     # 装到 /usr/local/bin，需要写权限</code></pre>
+      <p><code>~/.local/bin</code> 不在 PATH 时，脚本会直接把要追加的那一行打给你，复制进 <code>~/.bashrc</code> 或 <code>~/.zshrc</code> 就行。</p>
+      <h2>macOS 两个芯片</h2>
+      <p>官网下载区分 <strong>Apple 芯片（arm64）</strong> 和 <strong>Intel（x64）</strong>，别下错。GUI 版没有签名也没有公证，第一次要右键 → 打开。</p>
+      <h2>Linux 用 AppImage</h2>
+<pre><code>chmod +x TermuxAIHarness-*.AppImage
+./TermuxAIHarness-*.AppImage</code></pre>
+    </section>
+
+    <!-- 17 -->
+    <section class="page" data-title="网页版">
+      <div class="kicker">17 · 桌面端</div>
+      <h1>不装包，直接在浏览器里用</h1>
+      <p>官网的「网页版」入口打开的是同一套界面，跑在浏览器里。但<strong>引擎仍然在你本机</strong>——网页只通过 <code>127.0.0.1</code> 连你 Termux 或命令行里起的 <code>llama-server</code>。</p>
+      <h2>用法</h2>
+      <ol>
+        <li>本机先起引擎：<code>llama-server -m model.gguf -c 1024 --port 8080</code></li>
+        <li>浏览器打开官网 <code>web/</code> 页面。</li>
+        <li>地址栏填 <code>http://127.0.0.1:8080</code>，连通后即可对话。</li>
+      </ol>
+      <div class="warn">浏览器有同源与跨域限制。如果你的引擎在别的设备（比如手机跑引擎、电脑开网页），要么走局域网地址并在服务端放行跨域，要么直接在跑引擎的那台机器上开网页。</div>
+    </section>
+
+    <!-- 18 -->
+    <section class="page" data-title="常见故障">
+      <div class="kicker">18 · 排错</div>
+      <h1>这几类报错，八成是同一批原因</h1>
+      <h3>connection refused</h3>
+      <p>引擎没起，或端口不对。先 <code>curl http://127.0.0.1:8080/v1/models</code> 看看有没有响应。</p>
+      <h3>404 / 路径不存在</h3>
+      <p><code>TERMUX_AI_URL</code> 少了 <code>/v1/chat/completions</code>，或者后端不是 OpenAI 兼容接口。</p>
+      <h3>failed to allocate / 进程被杀</h3>
+      <p>内存不够。降 <code>-c</code>、换小模型、关掉后台应用。Android 上尤其容易发生在切后台之后。</p>
+      <h3>Permission denied</h3>
+      <p>装到 <code>/usr/local/bin</code> 却没权限，改用 <code>bash install.sh</code> 的默认用户安装；或者脚本没执行位，<code>chmod +x</code>。</p>
+      <h3>命令没反应，只回一句话</h3>
+      <p>模型没守 <code>CMD:</code> 前缀。换大一点的模型（3B 明显更稳），或在提示里强调“需要执行命令时必须以 CMD: 开头”。</p>
+      <h3>聊两句就断</h3>
+      <p>软超时。本地推理慢，<code>TERMUX_AI_TIMEOUT</code> 调到 180 试试；也可能是内存被回收。</p>
+    </section>
+
+    <!-- 19 -->
+    <section class="page" data-title="性能与保活">
+      <div class="kicker">19 · 进阶</div>
+      <h1>让它跑得久一点</h1>
+      <h2>线程别贪</h2>
+      <p><code>-t</code> 按大核数设。小核参与计算会拖慢整体，看着“占满 8 核”其实更慢。</p>
+      <h2>上下文别贪</h2>
+      <p><code>-c 2048</code> 够日常；长文档总结再上 4096。每加一档，内存和首字延迟都往上走。</p>
+      <h2>Android 保活</h2>
+      <ul>
+        <li>Termux 里执行 <code>termux-wake-lock</code>，避免息屏被挂起。</li>
+        <li>系统设置里给 Termux 关掉电池优化。</li>
+        <li>别在推理时同时开一堆应用——内存回收第一个杀的就是常驻进程。</li>
+      </ul>
+      <h2>温度</h2>
+      <p>手机长时间满载会降频，表现为“越聊越慢”。这不是软件问题，散热背夹比调参数有用。</p>
+      <div class="note">实测参考（荣耀平板 X9，3B，<code>-c 2048 -t 4</code>）：常规 9–15 token/s，短提示命中 slot 缓存最高 46 token/s。</div>
+    </section>
+
+    <!-- 20 -->
+    <section class="page" data-title="更新与贡献">
+      <div class="kicker">20 · 收尾</div>
+      <h1>更新、许可、以及怎么提问题</h1>
+      <h2>看有什么新东西</h2>
+      <p><code>CHANGELOG.md</code> 按版本记录，最新的是 v1.4.0：新增「深度思考」（支持 Qwen3 / R1 蒸馏这类会吐 <code>reasoning_content</code> 的模型）和「联网搜索」（Bing → DuckDuckGo → 中文维基三级回退，全免费、不要 API key）。</p>
+      <h2>升级</h2>
+<pre><code>git pull
+bash install.sh
+# 桌面端 / APK：重新从 Releases 下载对应平台的新包</code></pre>
+      <h2>遇到问题</h2>
+      <p>去 <a href="https://github.com/Huangqia123/termux-ai-harness/issues" target="_blank" rel="noopener">Issues</a> 提，附上：平台、机型与内存、模型文件名、<code>-c/-t</code> 参数、完整报错行。少一样都很难定位。</p>
+      <h2>许可</h2>
+      <p>项目本体 MIT。模型各自遵循上游协议：Qwen2.5 系 Apache-2.0，TinyLlama Apache-2.0，Llama 3.2 系为 Llama 3.2 Community License（再分发需保留许可文本并标注 Built with Llama）。详见 <code>THIRD-PARTY-NOTICES.md</code>。</p>
+      <div class="foot">
+        <a href="../">← 返回官网</a>
+        <a href="../backup/">备用站</a>
+        <a href="https://github.com/Huangqia123/termux-ai-harness" target="_blank" rel="noopener">GitHub 仓库</a>
+        <span>MIT © Huangqia123</span>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+(function(){
+  var pages = Array.prototype.slice.call(document.querySelectorAll('.page'));
+  var toc = document.getElementById('toc');
+  var pagerLabel = document.getElementById('pager');
+  var bar = document.getElementById('bar');
+  var cur = 0;
+
+  // 生成目录
+  pages.forEach(function(p, i){
+    var li = document.createElement('li');
+    var a = document.createElement('a');
+    a.href = '#' + (i + 1);
+    a.dataset.idx = i;
+    a.innerHTML = '<span class="n">' + String(i + 1).padStart(2, '0') + '</span><span>' + p.dataset.title + '</span>';
+    a.addEventListener('click', function(e){ e.preventDefault(); go(i); });
+    li.appendChild(a);
+    toc.appendChild(li);
+  });
+  var tocLinks = Array.prototype.slice.call(toc.querySelectorAll('a'));
+
+  function go(i){
+    i = Math.max(0, Math.min(pages.length - 1, i));
+    cur = i;
+    pages.forEach(function(p, k){ p.classList.toggle('on', k === i); });
+    tocLinks.forEach(function(a, k){ a.classList.toggle('on', k === i); });
+    pagerLabel.textContent = String(i + 1).padStart(2, '0') + ' / ' + pages.length;
+    bar.style.width = ((i + 1) / pages.length * 100) + '%';
+    try { history.replaceState(null, '', '#' + (i + 1)); } catch(e){}
+    window.scrollTo({ top: 0, behavior: 'instant' in document.documentElement.style ? 'instant' : 'auto' });
+    // 移动端：翻页后把目录滚到视野外（目录在下面）
+  }
+
+  // 底部翻页按钮
+  pages.forEach(function(p, i){
+    var wrap = document.createElement('div');
+    wrap.className = 'pager';
+    var prev = document.createElement('button');
+    prev.textContent = '← 上一页';
+    prev.onclick = function(){ go(cur - 1); };
+    var mid = document.createElement('span');
+    mid.className = 'mid';
+    mid.textContent = (i + 1) + ' / ' + pages.length;
+    var next = document.createElement('button');
+    next.textContent = i === pages.length - 1 ? '读完了 · 回到目录' : '下一页 →';
+    next.onclick = function(){
+      if (i === pages.length - 1) go(0); else go(cur + 1);
+    };
+    wrap.appendChild(prev); wrap.appendChild(mid); wrap.appendChild(next);
+    p.appendChild(wrap);
+
+    var spacer = document.createElement('div');
+    spacer.style.height = '8px';
+    p.appendChild(spacer);
+  });
+
+  // 刷新按钮状态
+  var origGo = go;
+  go = function(i){
+    origGo(i);
+    pages.forEach(function(p, k){
+      var btns = p.querySelectorAll('.pager button');
+      if (btns.length === 2){
+        btns[0].disabled = (k === 0);
+      }
+    });
+  };
+
+  // 初始页
+  var h = parseInt((location.hash || '').replace('#', ''), 10);
+  go(isNaN(h) ? 0 : h - 1);
+
+  // 键盘
+  document.addEventListener('keydown', function(e){
+    if (e.target && /input|textarea|select/i.test(e.target.tagName)) return;
+    if (e.key === 'ArrowRight') go(cur + 1);
+    if (e.key === 'ArrowLeft') go(cur - 1);
+  });
+
+  // 搜索
+  var search = document.getElementById('search');
+  search.addEventListener('input', function(){
+    var q = search.value.trim().toLowerCase();
+    tocLinks.forEach(function(a, i){
+      var hit = !q || a.textContent.toLowerCase().indexOf(q) !== -1;
+      a.parentNode.style.display = hit ? '' : 'none';
+    });
+  });
+
+  // 代码复制
+  document.querySelectorAll('pre').forEach(function(pre){
+    var btn = document.createElement('button');
+    btn.className = 'copy';
+    btn.textContent = '复制';
+    btn.onclick = function(){
+      var code = pre.querySelector('code');
+      var text = code ? code.innerText : pre.innerText;
+      var done = function(){ btn.textContent = '已复制'; setTimeout(function(){ btn.textContent = '复制'; }, 1400); };
+      if (navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text).then(done, done);
+      } else {
+        var ta = document.createElement('textarea');
+        ta.value = text; document.body.appendChild(ta); ta.select();
+        try { document.execCommand('copy'); } catch(e){}
+        document.body.removeChild(ta); done();
+      }
+    };
+    pre.appendChild(btn);
+  });
+})();
+</script>
+</body>
+</html>
