@@ -166,7 +166,7 @@
       el.setAttribute('title', t(el.getAttribute('data-i18n-title')))
     })
     const btn = document.getElementById('btn-lang')
-    if (btn) btn.textContent = lang === 'zh' ? 'EN' : '中'
+    if (btn) btn.textContent = lang === 'zh' ? '中' : 'EN'
   }
 
   function setLang(next) {
