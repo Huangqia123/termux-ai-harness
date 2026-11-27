@@ -1231,6 +1231,15 @@ if ('IntersectionObserver' in window) {
     return u.indexOf('http') === 0 ? PROXY + u : u;
   }
 
+  function verNum(t) {
+    var m = String(t || '').match(/(\d+)\.(\d+)\.(\d+)/);
+    return m ? (+m[1]) * 10000 + (+m[2]) * 100 + (+m[3]) : 0;
+  }
+  function staticVer() {
+    var el = document.querySelector('[data-ver]');
+    return el ? el.textContent.trim() : '';
+  }
+
   function jget(u) {
     return fetch(u, { headers: { 'Accept': 'application/json' } }).then(function (r) {
       if (!r.ok) throw new Error('http ' + r.status);
@@ -1322,6 +1331,9 @@ if ('IntersectionObserver' in window) {
     var latest = stable[0] || list[0];
     if (!latest) { paintHistory([], ''); return; }
     var tag = latest.tag;
+    /* 守门：远端数据比页面内置版本更旧（API 限流回退到慢镜像）时保留内置版本，只画历史列表 */
+    var sv = staticVer();
+    if (verNum(sv) > verNum(tag)) { paintHistory(list, sv); return; }
 
     Array.prototype.forEach.call(document.querySelectorAll('[data-ver]'), function (el) {
       el.textContent = tag;

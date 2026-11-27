@@ -1068,7 +1068,9 @@ termuxai-harness  <span class="c-com"># 说人话 → 命令 → 你确认</span
   var ALT='https://ungh.cc/repos/'+OWNER+'/'+REPO+'/releases';
   var PROXY='https://ghfast.top/';
   var PAT={android:/android\.apk$/i,win:/-win-x64\.zip$/i,'mac-arm':/-mac-arm64\.zip$/i,'mac-intel':/-mac-x64\.zip$/i,linux:/-linux-x86_64\.AppImage$/i};
-  function jget(u){return fetch(u,{headers:{Accept:'application/json'}}).then(function(r){if(!r.ok)throw new Error('http '+r.status);return r.json();});}
+  function verNum(t){var m=String(t||'').match(/(\d+)\.(\d+)\.(\d+)/);return m?(+m[1])*10000+(+m[2])*100+(+m[3]):0;}
+function staticVer(){var el=document.querySelector('[data-ver]');return el?el.textContent.trim():'';}
+function jget(u){return fetch(u,{headers:{Accept:'application/json'}}).then(function(r){if(!r.ok)throw new Error('http '+r.status);return r.json();});}
   function norm(r){
     return {tag:r.tag_name||r.tag, pre:!!r.prerelease, draft:!!r.draft,
       assets:(r.assets||[]).map(function(a){
@@ -1085,6 +1087,7 @@ termuxai-harness  <span class="c-com"># 说人话 → 命令 → 你确认</span
   load().then(function(list){
     var stable=list.filter(function(r){return !r.draft&&!r.pre;});
     var latest=stable[0]||list[0]; if(!latest) return;
+    var sv=staticVer(); if(verNum(sv)>verNum(latest.tag)) return;
     Array.prototype.forEach.call(document.querySelectorAll('[data-ver]'),function(e){e.textContent=latest.tag;});
     Array.prototype.forEach.call(document.querySelectorAll('[data-plat]'),function(el){
       var a=assetOf(latest,el.getAttribute('data-plat')); if(!a) return;
