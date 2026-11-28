@@ -90,6 +90,13 @@ Android / Linux / Windows / macOS / 网页版，同一套 renderer，同一套�
 
 </div>
 
+## 🎬 60 秒介绍片
+
+一部片子两版字幕语言，都是 1920×1080 / 30fps，代码逐帧渲染 + 代码合成配乐。
+
+- 🇨🇳 [中文版 `TermuxAIHarness-1.5.0-intro.mp4`](https://github.com/Huangqia123/termux-ai-harness/releases/download/v1.5.0/TermuxAIHarness-1.5.0-intro.mp4)
+- 🌍 [English version `TermuxAIHarness-1.5.0-intro-en.mp4`](https://github.com/Huangqia123/termux-ai-harness/releases/download/v1.5.0/TermuxAIHarness-1.5.0-intro-en.mp4)
+
 ## 📦 下载安装
 
 > [!IMPORTANT]
