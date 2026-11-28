@@ -197,11 +197,11 @@
       <h1>拿到安装包，并确认它没坏</h1>
       <p>官网首页的下载区会实时从 GitHub Releases 拉版本号和文件名，点平台名直接开始下载，默认走国内加速节点，文件与 GitHub 原包逐字节一致。</p>
       <h2>从命令行取</h2>
-<pre><code># 以 v1.4.4 为例，换成 latest 可自动取最新
-curl -L -O https://github.com/Huangqia123/termux-ai-harness/releases/download/v1.4.4/TermuxAIHarness-1.4.4-android.apk
-curl -L -O https://github.com/Huangqia123/termux-ai-harness/releases/download/v1.4.4/SHA256SUMS-1.4.4.txt</code></pre>
+<pre><code># 以 v1.5.0 为例，换成 latest 可自动取最新
+curl -L -O https://github.com/Huangqia123/termux-ai-harness/releases/download/v1.5.0/TermuxAIHarness-1.5.0-android.apk
+curl -L -O https://github.com/Huangqia123/termux-ai-harness/releases/download/v1.5.0/SHA256SUMS-1.5.0.txt</code></pre>
       <h2>校验</h2>
-<pre><code>sha256sum -c SHA256SUMS-1.4.4.txt</code></pre>
+<pre><code>sha256sum -c SHA256SUMS-1.5.0.txt</code></pre>
       <p>看到每行 <code>OK</code> 就说明文件完整。加速节点偶尔抽风时不一定是文件坏，也可以点每张下载卡下面的「GitHub 原链」重下一次。</p>
       <div class="note">如果你是直接克隆仓库用脚本（不装 GUI），这一步可以跳过——脚本就在仓库 <code>bin/</code> 和 <code>install.sh</code> 里。</div>
     </section>
@@ -492,7 +492,7 @@ bash install.sh --system     # 装到 /usr/local/bin，需要写权限</code></p
       <div class="kicker">20 · 收尾</div>
       <h1>更新、许可、以及怎么提问题</h1>
       <h2>看有什么新东西</h2>
-      <p><code>CHANGELOG.md</code> 按版本记录，最新的是 v1.4.4：新增「深度思考」（支持 Qwen3 / R1 蒸馏这类会吐 <code>reasoning_content</code> 的模型）和「联网搜索」（Bing → DuckDuckGo → 中文维基三级回退，全免费、不要 API key）。</p>
+      <p><code>CHANGELOG.md</code> 按版本记录，最新的是 v1.5.0：新增「深度思考」（支持 Qwen3 / R1 蒸馏这类会吐 <code>reasoning_content</code> 的模型）和「联网搜索」（Bing → DuckDuckGo → 中文维基三级回退，全免费、不要 API key）。</p>
       <h2>升级</h2>
 <pre><code>git pull
 bash install.sh
