@@ -35,11 +35,20 @@ public class MainActivity extends Activity {
     private WebView web;
     private android.webkit.ValueCallback<Uri[]> filePathCallback;
     private static final int REQ_FILE = 1024;
+    private EngineManager engine;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         WebView.setWebContentsDebuggingEnabled(true);
+
+        engine = new EngineManager(this);
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                if (engine.installIfNeeded()) engine.startIfModel();
+            }
+        }).start();
 
         web = new WebView(this);
         WebSettings s = web.getSettings();
@@ -104,6 +113,12 @@ public class MainActivity extends Activity {
         } else {
             super.onBackPressed();
         }
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (engine != null) engine.stop();
+        super.onDestroy();
     }
 
     private static String esc(String s) {
@@ -238,6 +253,25 @@ public class MainActivity extends Activity {
             while ((line = br.readLine()) != null) sb.append(line).append("\n");
             br.close();
             return sb.toString();
+        }
+
+        @JavascriptInterface
+        public String engineStatus() {
+            try {
+                return engine.statusJson();
+            } catch (Exception e) {
+                return "{\"installed\":false,\"running\":false,\"port\":8080,\"model\":\"\"}";
+            }
+        }
+
+        @JavascriptInterface
+        public void engineStart() {
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    engine.startIfModel();
+                }
+            }).start();
         }
     }
 }
