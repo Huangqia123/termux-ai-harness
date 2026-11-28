@@ -691,6 +691,80 @@ async function webSearch(query) {
 }
 
 
+/* ---------------------------------------------------------------- profiles */
+
+const crypto = require('node:crypto')
+
+const profileFile = () => path.join(app.getPath('userData'), 'profiles.json')
+
+function readProfiles() {
+  try {
+    const d = JSON.parse(fs.readFileSync(profileFile(), 'utf8'))
+    if (!d || !Array.isArray(d.profiles)) throw new Error('bad format')
+    return d
+  } catch {
+    return { version: 1, active: null, profiles: [] }
+  }
+}
+
+function writeProfiles(data) {
+  fs.mkdirSync(app.getPath('userData'), { recursive: true })
+  fs.writeFileSync(profileFile(), JSON.stringify(data, null, 2), { mode: 0o600 })
+}
+
+const hashPin = (pin, salt) =>
+  crypto.pbkdf2Sync(String(pin), salt, 100000, 32, 'sha256').toString('hex')
+
+function makeRecoveryCode() {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+  const ran = crypto.randomBytes(20)
+  let out = ''
+  for (let i = 0; i < 20; i++) {
+    out += alphabet[ran[i] % alphabet.length]
+    if (i % 5 === 4 && i !== 19) out += '-'
+  }
+  return out
+}
+
+const publicProfile = (p) => ({ id: p.id, type: p.type, name: p.name, createdAt: p.createdAt })
+
+/* ------------------------------------------------------------ github oauth */
+
+let pendingGithubToken = null
+
+function ghPost(pathname, body) {
+  return new Promise((resolve, reject) => {
+    const req = https.request(
+      {
+        hostname: 'github.com',
+        path: pathname,
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Content-Length': Buffer.byteLength(body),
+          'User-Agent': 'TermuxAIHarness'
+        }
+      },
+      (res) => {
+        let data = ''
+        res.on('data', (c) => (data += c))
+        res.on('end', () => {
+          try {
+            resolve(JSON.parse(data))
+          } catch {
+            reject(new Error('GitHub 返回了非 JSON 内容：' + data.slice(0, 80)))
+          }
+        })
+      }
+    )
+    req.setTimeout(15000, () => req.destroy(new Error('GitHub 请求超时')))
+    req.on('error', reject)
+    req.write(body)
+    req.end()
+  })
+}
+
 /* -------------------------------------------------------------------- ipc */
 
 function state() {
@@ -714,6 +788,110 @@ function state() {
 
 function registerIpc() {
   ipcMain.handle('state:init', () => state())
+
+  /* profiles */
+  ipcMain.handle('profile:list', () => {
+    const d = readProfiles()
+    return { active: d.active, profiles: d.profiles.map(publicProfile) }
+  })
+
+  ipcMain.handle('profile:create', (e, { name, pin, type }) => {
+    const clean = String(name || '').trim()
+    const p = String(pin || '')
+    if (clean.length < 1 || clean.length > 24) return { ok: false, error: 'bad-name' }
+    if (type !== 'github' && (p.length < 4 || p.length > 32)) return { ok: false, error: 'bad-pin' }
+    const d = readProfiles()
+    if (d.profiles.some((x) => x.name.toLowerCase() === clean.toLowerCase())) {
+      return { ok: false, error: 'name-taken' }
+    }
+    const salt = crypto.randomBytes(16).toString('hex')
+    const profile = {
+      id: (type === 'github' ? 'gh-' : 'lc-') + crypto.randomBytes(6).toString('hex'),
+      type: type === 'github' ? 'github' : 'local',
+      name: clean,
+      pinSalt: salt,
+      pinHash: hashPin(p, salt),
+      recoveryCode: makeRecoveryCode(),
+      createdAt: Date.now(),
+      githubToken: type === 'github' ? pendingGithubToken : null
+    }
+    if (type === 'github') pendingGithubToken = null
+    d.profiles.push(profile)
+    d.active = profile.id
+    writeProfiles(d)
+    return { ok: true, profile: publicProfile(profile), recoveryCode: profile.recoveryCode }
+  })
+
+  ipcMain.handle('profile:verify', (e, { id, pin }) => {
+    const d = readProfiles()
+    const p = d.profiles.find((x) => x.id === id)
+    if (!p) return { ok: false, error: 'no-profile' }
+    if (hashPin(String(pin || ''), p.pinSalt) !== p.pinHash) return { ok: false, error: 'bad-pin' }
+    d.active = p.id
+    writeProfiles(d)
+    return { ok: true, profile: publicProfile(p) }
+  })
+
+  ipcMain.handle('profile:activate', (e, id) => {
+    const d = readProfiles()
+    if (!d.profiles.some((x) => x.id === id)) return { ok: false, error: 'no-profile' }
+    d.active = id
+    writeProfiles(d)
+    return { ok: true }
+  })
+
+  ipcMain.handle('profile:delete', (e, id) => {
+    const d = readProfiles()
+    const i = d.profiles.findIndex((x) => x.id === id)
+    if (i < 0) return { ok: false, error: 'no-profile' }
+    d.profiles.splice(i, 1)
+    if (d.active === id) d.active = d.profiles[0] ? d.profiles[0].id : null
+    writeProfiles(d)
+    return { ok: true }
+  })
+
+  ipcMain.handle('profile:reset', (e, { id, recovery, pin }) => {
+    const d = readProfiles()
+    const p = d.profiles.find((x) => x.id === id)
+    if (!p) return { ok: false, error: 'no-profile' }
+    const norm = String(recovery || '').toUpperCase().replace(/\s+/g, '')
+    if (norm !== p.recoveryCode) return { ok: false, error: 'bad-recovery' }
+    if (String(pin || '').length < 4) return { ok: false, error: 'bad-pin' }
+    const salt = crypto.randomBytes(16).toString('hex')
+    p.pinSalt = salt
+    p.pinHash = hashPin(String(pin), salt)
+    writeProfiles(d)
+    return { ok: true }
+  })
+
+  ipcMain.handle('github:device-code', async (e, clientId) => {
+    try {
+      const d = await ghPost(
+        '/login/device/code',
+        `client_id=${encodeURIComponent(clientId)}&scope=read:user`
+      )
+      if (d.error) return { ok: false, error: d.error_description || d.error }
+      return { ok: true, data: d }
+    } catch (err) {
+      return { ok: false, error: err.message || String(err) }
+    }
+  })
+
+  ipcMain.handle('github:poll', async (e, { clientId, deviceCode }) => {
+    try {
+      const d = await ghPost(
+        '/login/oauth/access_token',
+        `client_id=${encodeURIComponent(clientId)}&device_code=${encodeURIComponent(deviceCode)}&grant_type=urn:ietf:params:oauth:grant-type:device_code`
+      )
+      if (d.access_token) {
+        pendingGithubToken = d.access_token
+        return { ok: true }
+      }
+      return { ok: false, error: d.error || 'unknown' }
+    } catch (err) {
+      return { ok: false, error: err.message || String(err) }
+    }
+  })
 
   ipcMain.handle('model:download', async (e, id) => {
     const win = BrowserWindow.fromWebContents(e.sender)
